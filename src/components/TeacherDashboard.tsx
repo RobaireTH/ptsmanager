@@ -69,20 +69,21 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src="" alt={userData.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {getInitials(userData.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1>Welcome back, {userData.name}</h1>
-              <p className="text-muted-foreground">Teacher Dashboard - Faith-Life International College</p>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src="" alt={userData.name} />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {getInitials(userData.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-lg sm:text-xl">Welcome back, {userData.name}</h1>
+                <p className="text-muted-foreground text-sm sm:text-base">Teacher Dashboard - Faith-Life International College</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
             {/* Notifications */}
             <Popover>
               <PopoverTrigger asChild>
@@ -111,9 +112,10 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
               </PopoverContent>
             </Popover>
             
-            <Button variant="outline" onClick={onLogout}>
+            <Button variant="outline" onClick={onLogout} className="whitespace-nowrap">
               Logout
             </Button>
+          </div>
           </div>
         </div>
       </div>
@@ -169,19 +171,21 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="students">Students</TabsTrigger>
-            <TabsTrigger value="results">Results</TabsTrigger>
-            <TabsTrigger value="messages" className="relative">
-              Messages
-              {unreadCount > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 text-xs">
-                  {unreadCount}
-                </Badge>
+          <div className="overflow-x-auto">
+            <TabsList className="grid grid-cols-4 min-w-fit w-full sm:w-auto">
+              <TabsTrigger value="students" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Students</TabsTrigger>
+              <TabsTrigger value="results" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Results</TabsTrigger>
+              <TabsTrigger value="messages" className="relative px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">
+                Messages
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 text-xs">
+                    {unreadCount}
+                  </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="attendance">Attendance</TabsTrigger>
+            <TabsTrigger value="attendance" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Attendance</TabsTrigger>
           </TabsList>
+          </div>
 
           {/* Students Tab */}
           <TabsContent value="students">

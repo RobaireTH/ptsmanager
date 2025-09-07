@@ -75,39 +75,40 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src="" alt={userData.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {getInitials(userData.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1>Welcome, {userData.name}</h1>
-              <div className="flex items-center gap-2">
-                <p className="text-muted-foreground">Parent Dashboard</p>
-                {userData.children.length > 1 && (
-                  <Select value={selectedChild.id} onValueChange={(value: string) => {
-                    const child = userData.children.find((c: any) => c.id === value);
-                    setSelectedChild(child);
-                  }}>
-                    <SelectTrigger className="w-48 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userData.children.map((child: any) => (
-                        <SelectItem key={child.id} value={child.id}>
-                          {child.name} ({child.class})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src="" alt={userData.name} />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {getInitials(userData.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-lg sm:text-xl">Welcome, {userData.name}</h1>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <p className="text-muted-foreground text-sm sm:text-base">Parent Dashboard</p>
+                  {userData.children.length > 1 && (
+                    <Select value={selectedChild.id} onValueChange={(value: string) => {
+                      const child = userData.children.find((c: any) => c.id === value);
+                      setSelectedChild(child);
+                    }}>
+                      <SelectTrigger className="w-full sm:w-48 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userData.children.map((child: any) => (
+                          <SelectItem key={child.id} value={child.id}>
+                            {child.name} ({child.class})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
             {/* Notifications */}
             <Popover>
               <PopoverTrigger asChild>
@@ -136,9 +137,10 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
               </PopoverContent>
             </Popover>
             
-            <Button variant="outline" onClick={onLogout}>
+            <Button variant="outline" onClick={onLogout} className="whitespace-nowrap">
               Logout
             </Button>
+          </div>
           </div>
         </div>
       </div>
@@ -194,19 +196,21 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="results">Academic Results</TabsTrigger>
-            <TabsTrigger value="messages" className="relative">
-              Messages
-              {unreadCount > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 text-xs">
-                  {unreadCount}
-                </Badge>
+          <div className="overflow-x-auto">
+            <TabsList className="grid grid-cols-4 min-w-fit w-full sm:w-auto">
+              <TabsTrigger value="overview" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Overview</TabsTrigger>
+              <TabsTrigger value="results" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Results</TabsTrigger>
+              <TabsTrigger value="messages" className="relative px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">
+                Messages
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 text-xs">
+                    {unreadCount}
+                  </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="profile" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Profile</TabsTrigger>
           </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview">

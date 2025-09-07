@@ -3,7 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Checkbox } from './ui/checkbox';
 import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
+import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 
 interface LoginPageProps {
   onLogin: (role: 'teacher' | 'parent' | 'admin', userData: any) => void;
@@ -13,6 +15,7 @@ interface LoginPageProps {
 export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = () => {
     // Mock login - determine role based on email domain/pattern
@@ -55,18 +58,25 @@ export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2 text-primary">
-            <img src={schoolLogo} alt="Faith-Life International College Logo" className="h-8 w-8" />
-            Faith-Life International College
-          </CardTitle>
-          <CardDescription>
-            Welcome back! Sign in to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ 
+          backgroundImage: `linear-gradient(rgba(29, 78, 216, 0.8), rgba(30, 58, 138, 0.8)), url(${studentsImage})` 
+        }}
+      />
+      <div className="relative z-10 w-full max-w-md">
+        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-primary">
+              <img src={schoolLogo} alt="Faith-Life International College Logo" className="h-8 w-8" />
+              Faith-Life International College
+            </CardTitle>
+            <CardDescription>
+              Welcome back! Sign in to your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
             <Input
@@ -87,6 +97,33 @@ export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+          </div>
+
+          {/* Remember Me and Forgot Password */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="remember" 
+                checked={rememberMe}
+                onCheckedChange={(checked: boolean) => setRememberMe(checked)}
+              />
+              <Label 
+                htmlFor="remember" 
+                className="text-sm font-normal cursor-pointer"
+              >
+                Remember me
+              </Label>
+            </div>
+            <button 
+              type="button"
+              className="text-sm text-primary hover:underline font-medium"
+              onClick={() => {
+                // TODO: Implement forgot password functionality
+                alert('Forgot password functionality will be implemented soon!');
+              }}
+            >
+              Forgot password?
+            </button>
           </div>
 
           <Button 
@@ -113,6 +150,7 @@ export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

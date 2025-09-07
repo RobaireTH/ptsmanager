@@ -84,76 +84,78 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src="" alt={userData.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {getInitials(userData.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1>Welcome, {userData.name}</h1>
-              <p className="text-muted-foreground">Administrator Dashboard - Faith-Life International College</p>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src="" alt={userData.name} />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {getInitials(userData.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-lg sm:text-xl">Welcome, {userData.name}</h1>
+                <p className="text-muted-foreground text-sm sm:text-base">Administrator Dashboard - Faith-Life International College</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search records..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64"
-              />
-            </div>
-            
-            {/* Notifications */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="relative">
-                  <Bell className="h-4 w-4" />
-                  {unreadNotifications > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs">
-                      {unreadNotifications}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80" align="end">
-                <div className="space-y-2">
-                  <h4 className="font-medium">Notifications</h4>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div key={notification.id} className={`p-2 rounded-md border ${!notification.read ? 'bg-accent' : 'bg-background'}`}>
-                        <div className="flex items-start gap-2">
-                          <AlertCircle className={`h-4 w-4 mt-1 ${
-                            notification.type === 'urgent' ? 'text-red-500' : 
-                            notification.type === 'warning' ? 'text-yellow-500' : 'text-blue-500'
-                          }`} />
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{notification.title}</p>
-                            <p className="text-xs text-muted-foreground">{notification.message}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{notification.date}</p>
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search records..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-full sm:w-64"
+                />
+              </div>
+              
+              {/* Notifications */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="relative">
+                    <Bell className="h-4 w-4" />
+                    {unreadNotifications > 0 && (
+                      <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs">
+                        {unreadNotifications}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Notifications</h4>
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {notifications.map((notification) => (
+                        <div key={notification.id} className={`p-2 rounded-md border ${!notification.read ? 'bg-accent' : 'bg-background'}`}>
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className={`h-4 w-4 mt-1 ${
+                              notification.type === 'urgent' ? 'text-red-500' : 
+                              notification.type === 'warning' ? 'text-yellow-500' : 'text-blue-500'
+                            }`} />
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{notification.title}</p>
+                              <p className="text-xs text-muted-foreground">{notification.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{notification.date}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            <Button variant="outline" onClick={onLogout}>
-              Logout
-            </Button>
+                </PopoverContent>
+              </Popover>
+              
+              <Button variant="outline" onClick={onLogout} className="whitespace-nowrap">
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
@@ -224,14 +226,16 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="teachers">Teachers</TabsTrigger>
-            <TabsTrigger value="students">Students</TabsTrigger>
-            <TabsTrigger value="parents">Parents</TabsTrigger>
-            <TabsTrigger value="classes">Classes</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="grid grid-cols-6 min-w-fit w-full sm:w-auto">
+              <TabsTrigger value="overview" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Overview</TabsTrigger>
+              <TabsTrigger value="teachers" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Teachers</TabsTrigger>
+              <TabsTrigger value="students" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Students</TabsTrigger>
+              <TabsTrigger value="parents" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Parents</TabsTrigger>
+              <TabsTrigger value="classes" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Classes</TabsTrigger>
+              <TabsTrigger value="reports" className="px-2 py-1 text-xs sm:text-sm sm:px-4 sm:py-2">Reports</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview">
@@ -245,12 +249,12 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                   <CardContent>
                     <div className="space-y-4">
                       {recentActivities.map((activity, index) => (
-                        <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                          <div className="bg-primary text-primary-foreground rounded-lg px-2 py-1 text-xs">
+                        <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 border rounded-lg">
+                          <div className="bg-primary text-primary-foreground rounded-lg px-2 py-1 text-xs w-fit">
                             {activity.time}
                           </div>
-                          <p className="flex-1">{activity.activity}</p>
-                          <Badge variant="outline">{activity.type}</Badge>
+                          <p className="flex-1 text-sm">{activity.activity}</p>
+                          <Badge variant="outline" className="w-fit">{activity.type}</Badge>
                         </div>
                       ))}
                     </div>
@@ -327,40 +331,46 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Profile</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Subjects</TableHead>
-                      <TableHead>Classes</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teachers.map((teacher) => (
-                      <TableRow key={teacher.id}>
-                        <TableCell>
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src="" alt={teacher.name} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                              {getInitials(teacher.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell className="font-medium">{teacher.name}</TableCell>
-                        <TableCell>{teacher.subjects.join(', ')}</TableCell>
-                        <TableCell>{teacher.classes}</TableCell>
-                        <TableCell>{teacher.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={teacher.status === 'Active' ? 'default' : 'secondary'}>
-                            {teacher.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Profile</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead className="hidden sm:table-cell">Subjects</TableHead>
+                        <TableHead className="hidden md:table-cell">Classes</TableHead>
+                        <TableHead className="hidden lg:table-cell">Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {teachers.map((teacher) => (
+                        <TableRow key={teacher.id}>
+                          <TableCell>
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src="" alt={teacher.name} />
+                              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                {getInitials(teacher.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div>
+                              <p>{teacher.name}</p>
+                              <p className="text-xs text-muted-foreground sm:hidden">{teacher.subjects.join(', ')}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">{teacher.subjects.join(', ')}</TableCell>
+                          <TableCell className="hidden md:table-cell">{teacher.classes}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{teacher.email}</TableCell>
+                          <TableCell>
+                            <Badge variant={teacher.status === 'Active' ? 'default' : 'secondary'}>
+                              {teacher.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
                             <Button size="sm" variant="outline">
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -373,6 +383,7 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -393,38 +404,44 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Profile</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Class</TableHead>
-                      <TableHead>Roll No</TableHead>
-                      <TableHead>Parent</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {students.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src="" alt={student.name} />
-                            <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
-                              {getInitials(student.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell className="font-medium">{student.name}</TableCell>
-                        <TableCell>{student.class}</TableCell>
-                        <TableCell>{student.rollNo}</TableCell>
-                        <TableCell>{student.parent}</TableCell>
-                        <TableCell>
-                          <Badge variant="default">{student.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Profile</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead className="hidden sm:table-cell">Class</TableHead>
+                        <TableHead className="hidden md:table-cell">Roll No</TableHead>
+                        <TableHead className="hidden lg:table-cell">Parent</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {students.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell>
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src="" alt={student.name} />
+                              <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
+                                {getInitials(student.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div>
+                              <p>{student.name}</p>
+                              <p className="text-xs text-muted-foreground sm:hidden">{student.class}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">{student.class}</TableCell>
+                          <TableCell className="hidden md:table-cell">{student.rollNo}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{student.parent}</TableCell>
+                          <TableCell>
+                            <Badge variant="default">{student.status}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
                             <Button size="sm" variant="outline">
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -437,6 +454,7 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -457,19 +475,20 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Profile</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Children</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Profile</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead className="hidden sm:table-cell">Email</TableHead>
+                        <TableHead className="hidden md:table-cell">Phone</TableHead>
+                        <TableHead className="hidden lg:table-cell">Children</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {parents.map((parent) => (
                       <TableRow key={parent.id}>
                         <TableCell>
@@ -480,10 +499,15 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                             </AvatarFallback>
                           </Avatar>
                         </TableCell>
-                        <TableCell className="font-medium">{parent.name}</TableCell>
-                        <TableCell>{parent.email}</TableCell>
-                        <TableCell>{parent.phone}</TableCell>
-                        <TableCell>{parent.children.join(', ')}</TableCell>
+                        <TableCell className="font-medium">
+                          <div>
+                            <p>{parent.name}</p>
+                            <p className="text-xs text-muted-foreground sm:hidden">{parent.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{parent.email}</TableCell>
+                        <TableCell className="hidden md:table-cell">{parent.phone}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{parent.children.join(', ')}</TableCell>
                         <TableCell>
                           <Badge variant="default">{parent.status}</Badge>
                         </TableCell>
@@ -501,6 +525,7 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -521,27 +546,33 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Class Name</TableHead>
-                      <TableHead>Students</TableHead>
-                      <TableHead>Class Teacher</TableHead>
-                      <TableHead>Subjects</TableHead>
-                      <TableHead>Room</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {classes.map((classItem) => (
-                      <TableRow key={classItem.id}>
-                        <TableCell className="font-medium">{classItem.name}</TableCell>
-                        <TableCell>{classItem.students}</TableCell>
-                        <TableCell>{classItem.teacher}</TableCell>
-                        <TableCell>{classItem.subjects}</TableCell>
-                        <TableCell>{classItem.room}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Class Name</TableHead>
+                        <TableHead>Students</TableHead>
+                        <TableHead className="hidden sm:table-cell">Class Teacher</TableHead>
+                        <TableHead className="hidden md:table-cell">Subjects</TableHead>
+                        <TableHead className="hidden lg:table-cell">Room</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {classes.map((classItem) => (
+                        <TableRow key={classItem.id}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <p>{classItem.name}</p>
+                              <p className="text-xs text-muted-foreground sm:hidden">{classItem.teacher}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{classItem.students}</TableCell>
+                          <TableCell className="hidden sm:table-cell">{classItem.teacher}</TableCell>
+                          <TableCell className="hidden md:table-cell">{classItem.subjects}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{classItem.room}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
                             <Button size="sm" variant="outline">
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -552,6 +583,7 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

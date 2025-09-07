@@ -6,6 +6,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { UserCheck, Users, Shield } from 'lucide-react';
 import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
+import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 
 interface SignupPageProps {
   onLogin: (role: 'teacher' | 'parent' | 'admin', userData: any) => void;
@@ -81,12 +82,19 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2 text-primary">
-            <img src={schoolLogo} alt="Faith-Life International College Logo" className="h-8 w-8" />
-            Faith-Life International College
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ 
+          backgroundImage: `linear-gradient(rgba(29, 78, 216, 0.8), rgba(30, 58, 138, 0.8)), url(${studentsImage})` 
+        }}
+      />
+      <div className="relative z-10 w-full max-w-md">
+        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-primary">
+              <img src={schoolLogo} alt="Faith-Life International College Logo" className="h-8 w-8" />
+              Faith-Life International College
           </CardTitle>
           <CardDescription>
             Create your account to get started
@@ -194,6 +202,7 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
