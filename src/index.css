@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 4.9%;
+    --primary: 220 100% 25%; 
+    --primary-foreground: 210 40% 98%;
+    --secondary: 45 93% 47%; 
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 220 100% 25%; 
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 220 100% 25%; 
+    --chart-1: 220 100% 25%; 
+    --chart-2: 45 93% 47%; 
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 220 100% 35%; 
+    --primary-foreground: 222 47% 11%;
+    --secondary: 45 93% 47%; 
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 220 100% 35%; 
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 220 100% 35%; 
+    --chart-1: 220 100% 35%; 
+    --chart-2: 45 93% 47%; 
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Logo blending styles */
+@layer components {
+  .logo-blend {
+    transition: all 0.3s ease-in-out;
+    filter: saturate(110%) contrast(110%);
+    mix-blend-mode: multiply;
+  }
+  
+  .logo-blend:hover {
+    filter: saturate(120%) contrast(120%) brightness(110%);
+    transform: scale(1.05);
+  }
+  
+  .header-logo {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 2px;
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.05);
+  }
+  
+  .footer-logo {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;  
+    padding: 1px;
+    backdrop-filter: blur(1px);
+  }
+  
+  /* Dark mode adaptations */
+  .dark .logo-blend {
+    mix-blend-mode: screen;
+    filter: saturate(120%) contrast(120%) brightness(110%);
+  }
+  
+  .dark .header-logo {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+  }
+  
+  .dark .footer-logo {
+    background: rgba(59, 130, 246, 0.05);
+  }
+}
