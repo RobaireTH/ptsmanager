@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
@@ -11,6 +11,13 @@ import { Label } from './ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { GraduationCap, MessageSquare, Download, Send, TrendingUp, Calendar, Bell, Camera } from 'lucide-react';
+// @ts-ignore - TypeScript module resolution for JS file
+import { 
+  getParentById, 
+  updateParent, 
+  updateParentProfilePicture, 
+  convertFileToBase64 
+} from '../utils/localStorage';
 
 interface ParentDashboardProps {
   userData: any;
@@ -19,9 +26,74 @@ interface ParentDashboardProps {
 
 export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedChild, setSelectedChild] = useState(userData.children[0]);
+  const [selectedChild, setSelectedChild] = useState(userData.childrenDetails?.[0] || userData.children?.[0]);
   const [selectedTerm, setSelectedTerm] = useState('1st-term');
   const [newMessage, setNewMessage] = useState('');
+  const [parentData, setParentData] = useState(userData);
+  const [profilePicture, setProfilePicture] = useState(userData.profilePicture || null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load parent data from localStorage on mount
+  useEffect(() => {
+    const storedParent = getParentById(userData.id);
+    if (storedParent) {
+      setParentData(storedParent);
+      setProfilePicture(storedParent.profilePicture);
+    }
+  }, [userData.id]);
+
+  const handleProfilePictureChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File size must be less than 2MB');
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+
+    try {
+      setIsUpdatingProfile(true);
+      const base64Data = await convertFileToBase64(file);
+      
+      // Update in localStorage
+      const success = updateParentProfilePicture(userData.id, base64Data);
+      
+      if (success) {
+        setProfilePicture(base64Data);
+        // Update parent data
+        const updatedParent = getParentById(userData.id);
+        if (updatedParent) {
+          setParentData(updatedParent);
+        }
+      } else {
+        alert('Failed to update profile picture');
+      }
+    } catch (error) {
+      alert('Error uploading image');
+      console.error('Profile picture upload error:', error);
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleUpdateProfile = (updates: any) => {
+    const success = updateParent(userData.id, updates);
+    if (success) {
+      const updatedParent = getParentById(userData.id);
+      if (updatedParent) {
+        setParentData(updatedParent);
+      }
+    }
+    return success;
+  };
 
   // Mock data for selected child
   const childResults = [
@@ -79,25 +151,26 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-10 w-10">
-                <AvatarImage src="" alt={userData.name} />
+                <AvatarImage src={profilePicture || ""} alt={parentData.name} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {getInitials(userData.name)}
+                  {getInitials(parentData.name)}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-lg sm:text-xl">Welcome, {userData.name}</h1>
+                <h1 className="text-lg sm:text-xl">Welcome, {parentData.name}</h1>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <p className="text-muted-foreground text-sm sm:text-base">Parent Dashboard</p>
-                  {userData.children.length > 1 && (
+                  {(userData.childrenDetails || userData.children)?.length > 1 && (
                     <Select value={selectedChild.id} onValueChange={(value: string) => {
-                      const child = userData.children.find((c: any) => c.id === value);
+                      const children = userData.childrenDetails || userData.children || [];
+                      const child = children.find((c: any) => c.id === value);
                       setSelectedChild(child);
                     }}>
                       <SelectTrigger className="w-full sm:w-48 h-8">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {userData.children.map((child: any) => (
+                        {(userData.childrenDetails || userData.children || []).map((child: any) => (
                           <SelectItem key={child.id} value={child.id}>
                             {child.name} ({child.class})
                           </SelectItem>
@@ -472,38 +545,69 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   {/* Profile Picture Section */}
                   <div className="flex items-center gap-4">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src="" alt={userData.name} />
+                      <AvatarImage src={profilePicture || ""} alt={parentData.name} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                        {getInitials(userData.name)}
+                        {getInitials(parentData.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="space-y-2">
-                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfilePictureChange}
+                        className="hidden"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-2"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUpdatingProfile}
+                      >
                         <Camera className="h-4 w-4" />
-                        Change Photo
+                        {isUpdatingProfile ? 'Uploading...' : 'Change Photo'}
                       </Button>
-                      <p className="text-muted-foreground">JPG, PNG or GIF. Max size 2MB</p>
+                      <p className="text-muted-foreground text-sm">JPG, PNG or GIF. Max size 2MB</p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Full Name</Label>
-                      <Input defaultValue={userData.name} />
+                      <Input 
+                        defaultValue={parentData.name} 
+                        onChange={(e) => setParentData({...parentData, name: e.target.value})}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Email Address</Label>
-                      <Input defaultValue={userData.email} />
+                      <Input 
+                        defaultValue={parentData.email} 
+                        onChange={(e) => setParentData({...parentData, email: e.target.value})}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Phone Number</Label>
-                      <Input defaultValue={userData.phone || "+234 803 123 4567"} />
+                      <Input 
+                        defaultValue={parentData.phone || "+234 803 123 4567"} 
+                        onChange={(e) => setParentData({...parentData, phone: e.target.value})}
+                      />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Address</Label>
-                      <Textarea defaultValue="Obafemi Awolowo University, Ile-Ife, Osun State" rows={3} />
-                    </div>
-                    <Button>Update Profile</Button>
+                    <Button onClick={() => {
+                      const success = handleUpdateProfile({
+                        name: parentData.name,
+                        email: parentData.email,
+                        phone: parentData.phone
+                      });
+                      if (success) {
+                        alert('Profile updated successfully!');
+                      } else {
+                        alert('Failed to update profile');
+                      }
+                    }}>
+                      Update Profile
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -514,7 +618,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   <CardDescription>Your children's school details</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {userData.children.map((child: any) => (
+                  {(userData.childrenDetails || userData.children || []).map((child: any) => (
                     <div key={child.id} className="border rounded-lg p-4 space-y-4">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">

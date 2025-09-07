@@ -6,6 +6,8 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
 import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
+// @ts-ignore - TypeScript module resolution for JS file
+import { getParentById, initializeLocalStorage } from '../utils/localStorage';
 
 interface LoginPageProps {
   onLogin: (role: 'teacher' | 'parent' | 'admin', userData: any) => void;
@@ -18,43 +20,74 @@ export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = () => {
-    // Mock login - determine role based on email domain/pattern
-    let role: 'teacher' | 'parent' | 'admin' = 'parent';
-    
-    if (email.includes('admin') || email.includes('principal')) {
-      role = 'admin';
-    } else if (email.includes('teacher') || email.endsWith('@faith-life.edu.ng')) {
-      role = 'teacher';
+    // Admin login with dedicated password
+    if (email.toLowerCase().includes('admin') || email.toLowerCase().includes('principal')) {
+      if (password !== 'admin123') {
+        alert('Invalid admin credentials! Use password: admin123');
+        return;
+      }
+      
+      const adminData = {
+        id: 'A001',
+        name: 'Dr. Folake Adeyemi',
+        email: email || 'admin@faith-life.edu.ng',
+        role: 'Principal'
+      };
+      
+      // Store in localStorage
+      localStorage.setItem('userRole', 'admin');
+      localStorage.setItem('userData', JSON.stringify(adminData));
+      onLogin('admin', adminData);
+      return;
     }
 
-    // Mock user data based on determined role
-    const mockUserData = {
-      teacher: {
+    // Teacher login
+    if (email.includes('teacher') || email.endsWith('@faith-life.edu.ng')) {
+      const teacherData = {
         id: 'T001',
         name: 'Mrs. Adebayo Oluwaseun',
         email: email || 'oluwaseun.adebayo@faith-life.edu.ng',
         subjects: ['Mathematics', 'Further Mathematics'],
         classes: ['JSS1 A', 'JSS2 B', 'SS1 C']
-      },
-      parent: {
+      };
+      
+      localStorage.setItem('userRole', 'teacher');
+      localStorage.setItem('userData', JSON.stringify(teacherData));
+      onLogin('teacher', teacherData);
+      return;
+    }
+
+    // Parent login (default)
+    initializeLocalStorage(); // Ensure localStorage is initialized
+    
+    let parentData = getParentById('P001'); // Default parent
+    
+    if (!parentData) {
+      // Fallback if localStorage isn't working
+      parentData = {
         id: 'P001',
         name: 'Mr. Babatunde Ogunkoya',
         email: email || 'babatunde.ogunkoya@gmail.com',
         phone: '+234 803 123 4567',
-        children: [
+        profilePicture: null,
+        children: ['S001', 'S002'],
+        status: 'Active',
+        childrenDetails: [
           { id: 'S001', name: 'Temilade Ogunkoya', class: 'JSS2 A', rollNo: 'JSS2A/001' },
           { id: 'S002', name: 'Olumide Ogunkoya', class: 'SS1 B', rollNo: 'SS1B/015' }
         ]
-      },
-      admin: {
-        id: 'A001',
-        name: 'Dr. Folake Adeyemi',
-        email: email || 'admin@faith-life.edu.ng',
-        role: 'Principal'
-      }
-    };
-
-    onLogin(role, mockUserData[role]);
+      };
+    } else {
+      // Add children details for UI compatibility
+      parentData.childrenDetails = [
+        { id: 'S001', name: 'Temilade Ogunkoya', class: 'JSS2 A', rollNo: 'JSS2A/001' },
+        { id: 'S002', name: 'Olumide Ogunkoya', class: 'SS1 B', rollNo: 'SS1B/015' }
+      ];
+    }
+    
+    localStorage.setItem('userRole', 'parent');
+    localStorage.setItem('userData', JSON.stringify(parentData));
+    onLogin('parent', parentData);
   };
 
   return (

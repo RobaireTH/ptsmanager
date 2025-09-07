@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
@@ -9,71 +9,222 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from './ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Users, GraduationCap, UserCheck, School, TrendingUp, AlertCircle, Search, Plus, Edit, Trash2, Bell } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Textarea } from './ui/textarea';
+import { Users, GraduationCap, UserCheck, School, TrendingUp, AlertCircle, Search, Plus, Edit, Trash2, Bell, MessageSquare } from 'lucide-react';
+import { 
+  initializeLocalStorage,
+  getTeachers, 
+  getStudents, 
+  getParents,
+  getClasses,
+  getEvents,
+  getMessages,
+  addTeacher, 
+  updateTeacher, 
+  deleteTeacher, 
+  addStudent, 
+  addClass, 
+  addEvent,
+  Teacher,
+  Student,
+  ClassItem,
+  Event,
+  Message
+} from '../utils/localStorage.js';
 
 interface AdminDashboardProps {
-  userData: any;
+  userData: {
+    name: string;
+    role: string;
+  };
   onLogout: () => void;
 }
 
 export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [parents, setParents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+  const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 
-  // Mock data with Nigerian education system
-  const schoolStats = {
-    totalStudents: 1485,
-    totalTeachers: 52,
-    totalParents: 1180,
-    totalClasses: 27,
-    attendanceRate: 93.8,
-    averageGrade: 78.5
+  // Form states
+  const [newTeacher, setNewTeacher] = useState({
+    name: '', email: '', phone: '', subjects: '', classes: ''
+  });
+  const [newStudent, setNewStudent] = useState({
+    name: '', class: '', rollNo: '', parentEmail: '', email: ''
+  });
+  const [newClass, setNewClass] = useState({
+    name: '', teacherId: '', subjects: '', room: '', students: '0'
+  });
+  const [newEvent, setNewEvent] = useState({
+    title: '', description: '', date: '', time: '', type: 'meeting'
+  });
+
+  useEffect(() => {
+    // Initialize localStorage and load data
+    initializeLocalStorage();
+    loadData();
+  }, []);
+
+  const loadData = () => {
+    setTeachers(getTeachers());
+    setStudents(getStudents());
+    setParents(getParents());
+    setClasses(getClasses());
+    setEvents(getEvents());
+    setMessages(getMessages());
   };
 
-  const teachers = [
-    { id: 'T001', name: 'Mrs. Adebayo Oluwaseun', subjects: ['Mathematics', 'Further Mathematics'], classes: 3, email: 'oluwaseun.adebayo@oauife.edu.ng', status: 'Active' },
-    { id: 'T002', name: 'Dr. Oladele Babatunde', subjects: ['Physics', 'Chemistry'], classes: 4, email: 'babatunde.oladele@oauife.edu.ng', status: 'Active' },
-    { id: 'T003', name: 'Mr. Ogundimu Ayodeji', subjects: ['English Language', 'Literature'], classes: 5, email: 'ayodeji.ogundimu@oauife.edu.ng', status: 'Active' },
-    { id: 'T004', name: 'Mrs. Fagbemi Kehinde', subjects: ['Biology', 'Agricultural Science'], classes: 3, email: 'kehinde.fagbemi@oauife.edu.ng', status: 'On Leave' },
-  ];
+  // Calculate dynamic stats
+  const schoolStats = {
+    totalStudents: students.length,
+    totalTeachers: teachers.length,
+    totalParents: parents.length,
+    totalClasses: classes.length,
+    attendanceRate: 93.8, // Default value, could be calculated from actual data
+    averageGrade: 78.5 // Default value, could be calculated from actual data
+  };
 
-  const students = [
-    { id: 'S001', name: 'Temilade Ogunkoya', class: 'JSS2 A', rollNo: 'JSS2A/001', parent: 'Mr. Babatunde Ogunkoya', email: 'temilade.ogunkoya@student.oauife.edu.ng', status: 'Active' },
-    { id: 'S002', name: 'Chidinma Okoro', class: 'JSS3 B', rollNo: 'JSS3B/008', parent: 'Mrs. Ngozi Okoro', email: 'chidinma.okoro@student.oauife.edu.ng', status: 'Active' },
-    { id: 'S003', name: 'Abdullahi Musa', class: 'SS1 A', rollNo: 'SS1A/015', parent: 'Alhaji Ibrahim Musa', email: 'abdullahi.musa@student.oauife.edu.ng', status: 'Active' },
-    { id: 'S004', name: 'Grace Adeyemi', class: 'SS2 C', rollNo: 'SS2C/022', parent: 'Dr. Folake Adeyemi', email: 'grace.adeyemi@student.oauife.edu.ng', status: 'Active' },
-  ];
+  const handleAddTeacher = () => {
+    if (!newTeacher.name || !newTeacher.email) return;
+    
+    const teacher = {
+      ...newTeacher,
+      subjects: newTeacher.subjects.split(',').map(s => s.trim()),
+      classes: newTeacher.classes.split(',').map(c => c.trim()),
+      status: 'Active'
+    };
+    
+    if (addTeacher(teacher)) {
+      setTeachers(getTeachers());
+      setNewTeacher({ name: '', email: '', phone: '', subjects: '', classes: '' });
+      setIsAddTeacherOpen(false);
+    }
+  };
 
-  const parents = [
-    { id: 'P001', name: 'Mr. Babatunde Ogunkoya', email: 'babatunde.ogunkoya@gmail.com', phone: '+234 803 123 4567', children: ['Temilade Ogunkoya', 'Olumide Ogunkoya'], status: 'Active' },
-    { id: 'P002', name: 'Mrs. Ngozi Okoro', email: 'ngozi.okoro@yahoo.com', phone: '+234 805 987 6543', children: ['Chidinma Okoro'], status: 'Active' },
-    { id: 'P003', name: 'Alhaji Ibrahim Musa', email: 'ibrahim.musa@hotmail.com', phone: '+234 807 456 7890', children: ['Abdullahi Musa'], status: 'Active' },
-    { id: 'P004', name: 'Dr. Folake Adeyemi', email: 'folake.adeyemi@oauife.edu.ng', phone: '+234 809 234 5678', children: ['Grace Adeyemi'], status: 'Active' },
-  ];
+  const handleDeleteTeacher = (teacherId: string) => {
+    if (deleteTeacher(teacherId)) {
+      setTeachers(getTeachers());
+    }
+  };
 
-  const classes = [
-    { id: 'C001', name: 'JSS1 A', students: 35, teacher: 'Mrs. Adebayo Oluwaseun', subjects: 9, room: 'Block A-101' },
-    { id: 'C002', name: 'JSS2 B', students: 33, teacher: 'Mr. Ogundimu Ayodeji', subjects: 9, room: 'Block A-102' },
-    { id: 'C003', name: 'JSS3 A', students: 32, teacher: 'Dr. Oladele Babatunde', subjects: 10, room: 'Block B-101' },
-    { id: 'C004', name: 'SS1 A', students: 30, teacher: 'Mrs. Fagbemi Kehinde', subjects: 12, room: 'Block C-101' },
-    { id: 'C005', name: 'SS2 B', students: 28, teacher: 'Mrs. Adebayo Oluwaseun', subjects: 12, room: 'Block C-102' },
-    { id: 'C006', name: 'SS3 A', students: 25, teacher: 'Dr. Oladele Babatunde', subjects: 12, room: 'Block C-103' },
-  ];
+  const handleUpdateTeacherStatus = (teacherId: string, status: string) => {
+    if (updateTeacher(teacherId, { status })) {
+      setTeachers(getTeachers());
+    }
+  };
 
-  const notifications = [
-    { id: 'N001', type: 'warning', title: 'Low Attendance Alert', message: 'JSS3 B has attendance below 85% this week', date: '2024-01-15', read: false },
-    { id: 'N002', type: 'info', title: 'New Teacher Registration', message: 'New teacher profile created for Mr. Adebola', date: '2024-01-14', read: false },
-    { id: 'N003', type: 'urgent', title: 'Parent Complaint', message: 'Urgent complaint received regarding canteen services', date: '2024-01-13', read: true },
-    { id: 'N004', type: 'info', title: 'System backup completed', message: 'Daily system backup completed successfully', date: '2024-01-12', read: true },
-  ];
+  const handleAddStudent = () => {
+    if (!newStudent.name || !newStudent.class || !newStudent.rollNo) return;
+    
+    const student = {
+      ...newStudent,
+      parentId: 'P001', // For now, assign to default parent
+      status: 'Active'
+    };
+    
+    if (addStudent(student)) {
+      setStudents(getStudents());
+      setNewStudent({ name: '', class: '', rollNo: '', parentEmail: '', email: '' });
+      setIsAddStudentOpen(false);
+    }
+  };
 
-  const recentActivities = [
-    { time: '10:30 AM', activity: 'New student registered: Kemi Olaoye (JSS1 C)', type: 'registration' },
-    { time: '09:45 AM', activity: 'SS2 A results uploaded by Mrs. Adebayo', type: 'academic' },
-    { time: '09:15 AM', activity: 'Parent-Teacher meeting scheduled for 2024-01-20', type: 'meeting' },
-    { time: '08:30 AM', activity: 'Attendance marked for all classes', type: 'attendance' },
-  ];
+  const handleAddClass = () => {
+    if (!newClass.name || !newClass.teacherId) return;
+    
+    const classData = {
+      ...newClass,
+      subjects: newClass.subjects.split(',').map(s => s.trim()),
+      students: parseInt(newClass.students) || 0
+    };
+    
+    if (addClass(classData)) {
+      setClasses(getClasses());
+      setNewClass({ name: '', teacherId: '', subjects: '', room: '', students: '0' });
+      setIsAddClassOpen(false);
+    }
+  };
 
+  const handleAddEvent = () => {
+    if (!newEvent.title || !newEvent.date) return;
+    
+    if (addEvent(newEvent)) {
+      setEvents(getEvents());
+      setNewEvent({ title: '', description: '', date: '', time: '', type: 'meeting' });
+      setIsAddEventOpen(false);
+    }
+  };
+
+  // Dynamic notifications and activities
+  const generateNotifications = () => {
+    const notifications = [];
+    
+    // Check for low attendance classes
+    classes.forEach(classItem => {
+      if (classItem.students < 25) {
+        notifications.push({
+          id: `low-students-${classItem.id}`,
+          type: 'warning',
+          title: 'Low Student Count',
+          message: `${classItem.name} has only ${classItem.students} students`,
+          date: new Date().toISOString().split('T')[0],
+          read: false
+        });
+      }
+    });
+
+    // Check for teachers on leave
+    const onLeaveTeachers = teachers.filter(t => t.status === 'On Leave');
+    if (onLeaveTeachers.length > 0) {
+      notifications.push({
+        id: 'teachers-on-leave',
+        type: 'info',
+        title: 'Teachers on Leave',
+        message: `${onLeaveTeachers.length} teacher(s) currently on leave`,
+        date: new Date().toISOString().split('T')[0],
+        read: false
+      });
+    }
+
+    return notifications;
+  };
+
+  const generateRecentActivities = () => {
+    const activities: Array<{time: string, activity: string, type: string}> = [];
+    
+    // Recent teacher additions
+    teachers.slice(-3).forEach(teacher => {
+      activities.push({
+        time: '10:30 AM',
+        activity: `Teacher profile: ${teacher.name} (${teacher.subjects.join(', ')})`,
+        type: 'registration'
+      });
+    });
+
+    // Recent student additions
+    students.slice(-2).forEach(student => {
+      activities.push({
+        time: '09:45 AM',
+        activity: `Student enrolled: ${student.name} (${student.class})`,
+        type: 'registration'
+      });
+    });
+
+    return activities.slice(0, 4);
+  };
+
+  const notifications = generateNotifications();
+  const recentActivities = generateRecentActivities();
   const unreadNotifications = notifications.filter(notif => !notif.read).length;
 
   const getInitials = (name: string) => {
@@ -299,7 +450,7 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     <CardTitle>Teacher Management</CardTitle>
                     <CardDescription>Manage teaching staff and their assignments</CardDescription>
                   </div>
-                  <Dialog>
+                  <Dialog open={isAddTeacherOpen} onOpenChange={setIsAddTeacherOpen}>
                     <DialogTrigger asChild>
                       <Button className="flex items-center gap-2">
                         <Plus className="h-4 w-4" />
@@ -312,19 +463,55 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                         <DialogDescription>Create a new teacher profile</DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Full Name</Label>
-                          <Input placeholder="Enter teacher's name" />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Full Name</Label>
+                            <Input 
+                              placeholder="Enter teacher's name" 
+                              value={newTeacher.name}
+                              onChange={(e) => setNewTeacher({...newTeacher, name: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input 
+                              type="email" 
+                              placeholder="Enter email address" 
+                              value={newTeacher.email}
+                              onChange={(e) => setNewTeacher({...newTeacher, email: e.target.value})}
+                            />
+                          </div>
                         </div>
                         <div className="space-y-2">
-                          <Label>Email</Label>
-                          <Input type="email" placeholder="Enter email address" />
+                          <Label>Phone</Label>
+                          <Input 
+                            placeholder="Enter phone number" 
+                            value={newTeacher.phone}
+                            onChange={(e) => setNewTeacher({...newTeacher, phone: e.target.value})}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label>Subjects</Label>
-                          <Input placeholder="Enter subjects (comma separated)" />
+                          <Input 
+                            placeholder="Enter subjects (comma separated)" 
+                            value={newTeacher.subjects}
+                            onChange={(e) => setNewTeacher({...newTeacher, subjects: e.target.value})}
+                          />
                         </div>
-                        <Button className="w-full">Add Teacher</Button>
+                        <div className="space-y-2">
+                          <Label>Classes</Label>
+                          <Input 
+                            placeholder="Enter classes (comma separated)" 
+                            value={newTeacher.classes}
+                            onChange={(e) => setNewTeacher({...newTeacher, classes: e.target.value})}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={() => setIsAddTeacherOpen(false)} className="flex-1">
+                            Cancel
+                          </Button>
+                          <Button onClick={handleAddTeacher} className="flex-1">Add Teacher</Button>
+                        </div>
                       </div>
                     </DialogContent>
                   </Dialog>
@@ -345,7 +532,10 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {teachers.map((teacher) => (
+                      {teachers.filter(teacher => 
+                        teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        teacher.email.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).map((teacher) => (
                         <TableRow key={teacher.id}>
                           <TableCell>
                             <Avatar className="h-8 w-8">
@@ -361,28 +551,54 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                               <p className="text-xs text-muted-foreground sm:hidden">{teacher.subjects.join(', ')}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">{teacher.subjects.join(', ')}</TableCell>
-                          <TableCell className="hidden md:table-cell">{teacher.classes}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex flex-wrap gap-1">
+                              {teacher.subjects.map((subject, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">{subject}</Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="flex flex-wrap gap-1">
+                              {teacher.classes.map((cls, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs">{cls}</Badge>
+                              ))}
+                            </div>
+                          </TableCell>
                           <TableCell className="hidden lg:table-cell">{teacher.email}</TableCell>
                           <TableCell>
-                            <Badge variant={teacher.status === 'Active' ? 'default' : 'secondary'}>
-                              {teacher.status}
-                            </Badge>
+                            <Select
+                              value={teacher.status}
+                              onValueChange={(value: string) => handleUpdateTeacherStatus(teacher.id, value)}
+                            >
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Active">Active</SelectItem>
+                                <SelectItem value="On Leave">On Leave</SelectItem>
+                                <SelectItem value="Suspended">Suspended</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                              <Button size="sm" variant="outline">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleDeleteTeacher(teacher.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
@@ -397,10 +613,74 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     <CardTitle>Student Management</CardTitle>
                     <CardDescription>Manage student records and information</CardDescription>
                   </div>
-                  <Button className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Student
-                  </Button>
+                  <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Student
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add New Student</DialogTitle>
+                        <DialogDescription>Register a new student</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Full Name</Label>
+                            <Input 
+                              placeholder="Enter student's name" 
+                              value={newStudent.name}
+                              onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Class</Label>
+                            <Input 
+                              placeholder="e.g., SS1 A" 
+                              value={newStudent.class}
+                              onChange={(e) => setNewStudent({...newStudent, class: e.target.value})}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Roll Number</Label>
+                            <Input 
+                              placeholder="e.g., SS1A/001" 
+                              value={newStudent.rollNo}
+                              onChange={(e) => setNewStudent({...newStudent, rollNo: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Student Email</Label>
+                            <Input 
+                              type="email"
+                              placeholder="student@school.edu.ng" 
+                              value={newStudent.email}
+                              onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Parent Email</Label>
+                          <Input 
+                            type="email"
+                            placeholder="parent@email.com" 
+                            value={newStudent.parentEmail}
+                            onChange={(e) => setNewStudent({...newStudent, parentEmail: e.target.value})}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={() => setIsAddStudentOpen(false)} className="flex-1">
+                            Cancel
+                          </Button>
+                          <Button onClick={handleAddStudent} className="flex-1">Add Student</Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent>
@@ -412,13 +692,17 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                         <TableHead>Name</TableHead>
                         <TableHead className="hidden sm:table-cell">Class</TableHead>
                         <TableHead className="hidden md:table-cell">Roll No</TableHead>
-                        <TableHead className="hidden lg:table-cell">Parent</TableHead>
+                        <TableHead className="hidden lg:table-cell">Email</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {students.map((student) => (
+                      {students.filter(student => 
+                        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        student.class.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        student.rollNo.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).map((student) => (
                         <TableRow key={student.id}>
                           <TableCell>
                             <Avatar className="h-8 w-8">
@@ -434,26 +718,28 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                               <p className="text-xs text-muted-foreground sm:hidden">{student.class}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">{student.class}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <Badge variant="outline">{student.class}</Badge>
+                          </TableCell>
                           <TableCell className="hidden md:table-cell">{student.rollNo}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{student.parent}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{student.email}</TableCell>
                           <TableCell>
                             <Badge variant="default">{student.status}</Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                              <Button size="sm" variant="outline">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
@@ -539,10 +825,83 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     <CardTitle>Class Management</CardTitle>
                     <CardDescription>Manage classes and their assignments</CardDescription>
                   </div>
-                  <Button className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Class
-                  </Button>
+                  <Dialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Class
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add New Class</DialogTitle>
+                        <DialogDescription>Create a new class</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Class Name</Label>
+                            <Input 
+                              placeholder="e.g., SS1 A" 
+                              value={newClass.name}
+                              onChange={(e) => setNewClass({...newClass, name: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Class Teacher</Label>
+                            <Select 
+                              value={newClass.teacherId} 
+                              onValueChange={(value: string) => setNewClass({...newClass, teacherId: value})}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select teacher" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {teachers.map((teacher) => (
+                                  <SelectItem key={teacher.id} value={teacher.id}>
+                                    {teacher.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Room</Label>
+                            <Input 
+                              placeholder="e.g., Block A-101" 
+                              value={newClass.room}
+                              onChange={(e) => setNewClass({...newClass, room: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Expected Students</Label>
+                            <Input 
+                              type="number"
+                              placeholder="30" 
+                              value={newClass.students}
+                              onChange={(e) => setNewClass({...newClass, students: e.target.value})}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Subjects</Label>
+                          <Input 
+                            placeholder="Mathematics, English, Physics (comma separated)" 
+                            value={newClass.subjects}
+                            onChange={(e) => setNewClass({...newClass, subjects: e.target.value})}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={() => setIsAddClassOpen(false)} className="flex-1">
+                            Cancel
+                          </Button>
+                          <Button onClick={handleAddClass} className="flex-1">Add Class</Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent>
@@ -559,30 +918,52 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {classes.map((classItem) => (
+                      {classes.filter(classItem => 
+                        classItem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (classItem.teacherName && classItem.teacherName.toLowerCase().includes(searchQuery.toLowerCase()))
+                      ).map((classItem) => (
                         <TableRow key={classItem.id}>
                           <TableCell className="font-medium">
                             <div>
                               <p>{classItem.name}</p>
-                              <p className="text-xs text-muted-foreground sm:hidden">{classItem.teacher}</p>
+                              <p className="text-xs text-muted-foreground sm:hidden">
+                                {classItem.teacherName || 'No teacher assigned'}
+                              </p>
                             </div>
                           </TableCell>
-                          <TableCell>{classItem.students}</TableCell>
-                          <TableCell className="hidden sm:table-cell">{classItem.teacher}</TableCell>
-                          <TableCell className="hidden md:table-cell">{classItem.subjects}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{classItem.students} students</Badge>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {classItem.teacherName || 'No teacher assigned'}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="flex flex-wrap gap-1">
+                              {classItem.subjects.slice(0, 3).map((subject, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs">{subject}</Badge>
+                              ))}
+                              {classItem.subjects.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{classItem.subjects.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell className="hidden lg:table-cell">{classItem.room}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="outline">View Students</Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                              <Button size="sm" variant="outline">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Users className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
@@ -590,30 +971,193 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
 
           {/* Reports Tab */}
           <TabsContent value="reports">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              {/* Events Section */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Academic Reports</CardTitle>
-                  <CardDescription>Generate comprehensive academic reports</CardDescription>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>School Events</CardTitle>
+                      <CardDescription>Manage PTA meetings and school events</CardDescription>
+                    </div>
+                    <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          Add Event
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Event</DialogTitle>
+                          <DialogDescription>Create a new school event or meeting</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Event Title</Label>
+                            <Input 
+                              placeholder="e.g., PTA Meeting" 
+                              value={newEvent.title}
+                              onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Description</Label>
+                            <Textarea 
+                              placeholder="Event details and agenda" 
+                              value={newEvent.description}
+                              onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Date</Label>
+                              <Input 
+                                type="date" 
+                                value={newEvent.date}
+                                onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Time</Label>
+                              <Input 
+                                type="time" 
+                                value={newEvent.time}
+                                onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Event Type</Label>
+                            <Select 
+                              value={newEvent.type} 
+                              onValueChange={(value: string) => setNewEvent({...newEvent, type: value})}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="meeting">PTA Meeting</SelectItem>
+                                <SelectItem value="academic">Academic Event</SelectItem>
+                                <SelectItem value="sports">Sports Event</SelectItem>
+                                <SelectItem value="cultural">Cultural Event</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setIsAddEventOpen(false)} className="flex-1">
+                              Cancel
+                            </Button>
+                            <Button onClick={handleAddEvent} className="flex-1">Add Event</Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button className="w-full justify-start">Overall School Performance Report</Button>
-                  <Button className="w-full justify-start">Class-wise Academic Analysis</Button>
-                  <Button className="w-full justify-start">Subject Performance Trends</Button>
-                  <Button className="w-full justify-start">Student Progress Reports</Button>
+                <CardContent>
+                  <div className="space-y-4">
+                    {events.slice(0, 5).map((event) => (
+                      <div key={event.id} className="p-4 border rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{event.title}</h4>
+                            <p className="text-sm text-muted-foreground">{event.description}</p>
+                            <div className="flex gap-4 text-xs text-muted-foreground mt-2">
+                              <span>📅 {event.date}</span>
+                              <span>🕒 {event.time}</span>
+                              <Badge variant="outline">{event.type}</Badge>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="outline">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {events.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8">
+                        No events scheduled. Click "Add Event" to create one.
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
+              {/* Reports Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Academic Reports</CardTitle>
+                    <CardDescription>Generate comprehensive academic reports</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button className="w-full justify-start">Overall School Performance Report</Button>
+                    <Button className="w-full justify-start">Class-wise Academic Analysis</Button>
+                    <Button className="w-full justify-start">Subject Performance Trends</Button>
+                    <Button className="w-full justify-start">Student Progress Reports</Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Administrative Reports</CardTitle>
+                    <CardDescription>Generate operational and administrative reports</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button className="w-full justify-start">Attendance Summary Report</Button>
+                    <Button className="w-full justify-start">Teacher Performance Report</Button>
+                    <Button className="w-full justify-start">Financial Summary Report</Button>
+                    <Button className="w-full justify-start">Parent Engagement Report</Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Messages Section */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Administrative Reports</CardTitle>
-                  <CardDescription>Generate operational and administrative reports</CardDescription>
+                  <CardTitle>Message Center</CardTitle>
+                  <CardDescription>Send messages to parents and teachers</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button className="w-full justify-start">Attendance Summary Report</Button>
-                  <Button className="w-full justify-start">Teacher Performance Report</Button>
-                  <Button className="w-full justify-start">Financial Summary Report</Button>
-                  <Button className="w-full justify-start">Parent Engagement Report</Button>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Button className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Send Message to All Parents
+                    </Button>
+                    <Button className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Send Message to All Teachers
+                    </Button>
+                    <Button className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Send Message to Specific Class
+                    </Button>
+                    <Button className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      View Message History
+                    </Button>
+                  </div>
+                  
+                  {messages.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="font-medium mb-4">Recent Messages</h4>
+                      <div className="space-y-2">
+                        {messages.slice(0, 3).map((message) => (
+                          <div key={message.id} className="p-3 border rounded-lg text-sm">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{message.subject}</p>
+                                <p className="text-muted-foreground">To: {message.recipient}</p>
+                              </div>
+                              <span className="text-xs text-muted-foreground">{message.date}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
