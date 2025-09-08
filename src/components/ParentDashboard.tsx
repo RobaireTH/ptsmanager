@@ -458,6 +458,11 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {students.length === 0 && !loading && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-6">No students yet</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
 
@@ -508,6 +513,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                           <Button size="sm" variant="outline">Reply</Button>
                         </div>
                       ))}
+                      <div className="text-sm text-muted-foreground border rounded-lg p-6 text-center">No messages yet</div>
                     </div>
                   </CardContent>
                 </Card>

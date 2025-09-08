@@ -185,6 +185,13 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {students.length === 0 && !loading && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                          Nothing to see here
+                        </TableCell>
+                      </TableRow>
+                    )}
                     {students.map((student) => (
                       <TableRow key={student.id}>
                         <TableCell>
@@ -224,6 +231,11 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
+                      {messages.length === 0 && !loading && (
+                        <div className="text-sm text-muted-foreground border rounded-lg p-6 text-center">
+                          No messages yet
+                        </div>
+                      )}
                       {messages.map((message) => (
             <div key={message.id} className="border rounded-lg p-4 space-y-2">
                           <div className="flex justify-between items-start">

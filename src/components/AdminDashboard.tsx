@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Users, GraduationCap, UserCheck, School, TrendingUp, AlertCircle, Search, Plus, Edit, Trash2, Bell, MessageSquare } from 'lucide-react';
-import { createTeacher, updateTeacher, deleteTeacher, createStudent, createClass, createEvent, createUser, Teacher } from '../lib/api';
+import { createTeacher, updateTeacher, deleteTeacher, createStudent, createClass, createEvent, createUser, Teacher } from '../lib/api'; // createUser reserved for future admin user creation
 import { 
   useTeachers,
   useStudents,
@@ -587,6 +587,11 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+                      {teachers.length === 0 && !teachersLoading && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-6">Nothing to see here</TableCell>
+                        </TableRow>
+                      )}
                       {teachers.filter(teacher => {
                         const name = teacherName(teacher).toLowerCase();
                         const email = teacherEmail(teacher).toLowerCase();
@@ -753,6 +758,11 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+                      {students.length === 0 && !studentsLoading && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-6">Nothing to see here</TableCell>
+                        </TableRow>
+                      )}
                       {students.filter(student => 
                         student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         (classes.find(c=>c.id===student.class_id)?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -830,41 +840,52 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {parents.map((parent) => (
-                      <TableRow key={parent.id}>
-                        <TableCell>
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src="" alt={parent.name} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                              {getInitials(parent.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div>
-                            <p>{parent.name}</p>
-                            <p className="text-xs text-muted-foreground sm:hidden">{parent.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">{parent.email}</TableCell>
-                        <TableCell className="hidden md:table-cell">{parent.phone}</TableCell>
-                        <TableCell className="hidden lg:table-cell">{parent.children.join(', ')}</TableCell>
-                        <TableCell>
-                          <Badge variant="default">{parent.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
+                      {parents.length === 0 && !parentsLoading && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-6">No parents yet</TableCell>
+                        </TableRow>
+                      )}
+                      {parents.map((parent) => {
+                        const parentUser = users.find(u => u.id === parent.user_id);
+                        const displayName = parentUser?.name || `Parent #${parent.id}`;
+                        const displayEmail = parentUser?.email || '—';
+                        const displayStatus = parentUser?.status || '—';
+                        return (
+                          <TableRow key={parent.id}>
+                            <TableCell>
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src="" alt={displayName} />
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                  {getInitials(displayName)}
+                                </AvatarFallback>
+                              </Avatar>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <div>
+                                <p>{displayName}</p>
+                                <p className="text-xs text-muted-foreground sm:hidden">{displayEmail}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">{displayEmail}</TableCell>
+                            <TableCell className="hidden md:table-cell">{parent.phone || '—'}</TableCell>
+                            <TableCell className="hidden lg:table-cell">-</TableCell>
+                            <TableCell>
+                              <Badge variant="default">{displayStatus}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
                 </Table>
                 </div>
               </CardContent>
@@ -973,6 +994,11 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+                      {classes.length === 0 && !classesLoading && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No classes yet</TableCell>
+                        </TableRow>
+                      )}
                       {classes.filter(classItem => {
                         const teacherUser = users.find(u=>u.id===classItem.teacher_id);
                         const teacherNameSearch = teacherUser?.name?.toLowerCase() || '';
@@ -1218,6 +1244,11 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                         ))}
                       </div>
                     </div>
+                  )}
+                  {messages.length === 0 && !messagesLoading && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">No messages yet</TableCell>
+                    </TableRow>
                   )}
                 </CardContent>
               </Card>
