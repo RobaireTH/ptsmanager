@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -14,16 +14,6 @@ interface ResetPasswordPageProps {
 
 export function ResetPasswordPage({ onSwitchToLogin }: ResetPasswordPageProps) {
   const [token, setToken] = useState('');
-  // Auto-populate token from URL (?token=...) if present
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const t = params.get('token');
-      if (t) setToken(t);
-    } catch {
-      /* ignore */
-    }
-  }, []);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPass, setShowPass] = useState(false);

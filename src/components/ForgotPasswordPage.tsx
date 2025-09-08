@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Mail } from 'lucide-react';
+import { Eye, EyeOff, Mail } from 'lucide-react';
 import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
 import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 import { requestPasswordReset } from '../lib/api';
@@ -61,7 +61,7 @@ export function ForgotPasswordPage({ onSwitchToLogin }: ForgotPasswordPageProps)
                   <Mail className="h-6 w-6 text-green-600" />
                 </div>
                 <p className="text-foreground">
-                  If an account exists for <span className="font-medium">{email}</span>, we've sent a password reset link.
+                  If an account exists for <span className="font-medium">{email}</span>, weve sent a password reset link.
                   Please check your inbox (and spam folder).
                 </p>
                 <Button className="w-full" onClick={onSwitchToLogin}>

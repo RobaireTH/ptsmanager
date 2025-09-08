@@ -6,7 +6,6 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from app.db.session import get_db
 from app.models.models import User
-from app.services.email import send_email, build_reset_link
 
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret")
 JWT_ALG = "HS256"
@@ -164,31 +163,14 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     # Always respond success to avoid user enumeration
     import secrets
     from datetime import datetime, timedelta
-        if user:
-                user.password_reset_token = secrets.token_urlsafe(32)
-                user.password_reset_expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
-                db.commit()
-
-                # Build reset link and send email (best-effort; don't leak on errors)
-                reset_link = build_reset_link(user.password_reset_token)
-                html = f"""
-                <p>Hello {user.name},</p>
-                <p>You (or someone else) requested a password reset for your account. If this was you, click the button below to reset your password. This link will expire in 1 hour.</p>
-                <p style='text-align:center;margin:24px 0;'>
-                    <a href='{reset_link}' style='background:#2563eb;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:500;'>Reset Password</a>
-                </p>
-                <p>If the button does not work, copy and paste this URL into your browser:<br/>
-                <code style='word-break:break-all'>{reset_link}</code></p>
-                <p>If you did not request this, you can safely ignore this email.</p>
-                <p>– Faith-Life International College</p>
-                """.strip()
-                send_email(user.email, "Password Reset Instructions", html, text=f"Reset your password: {reset_link}")
-
-                resp = {"sent": True}
-                if AUTH_DEV_MODE:
-                        resp["reset_token"] = user.password_reset_token
-                        resp["reset_link"] = reset_link
-                return resp
+    if user:
+        user.password_reset_token = secrets.token_urlsafe(32)
+        user.password_reset_expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        db.commit()
+        resp = {"sent": True}
+        if AUTH_DEV_MODE:
+            resp["reset_token"] = user.password_reset_token
+        return resp
     return {"sent": True}
 
 @router.post("/reset-password")
@@ -211,18 +193,6 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     user.password_reset_token = None
     user.password_reset_expires_at = None
     db.commit()
-
-    # Send confirmation email (best effort)
-    try:
-        html = f"""
-        <p>Hello {user.name},</p>
-        <p>This is a confirmation that your password has just been reset successfully. If you did not perform this action, please contact support immediately.</p>
-        <p>– Faith-Life International College</p>
-        """.strip()
-        send_email(user.email, "Your password was reset", html, text="Your password was reset successfully.")
-    except Exception as e:
-        print("[password-reset-confirm-email:ERROR]", e)
-
     return {"reset": True}
 
 # Dependency
