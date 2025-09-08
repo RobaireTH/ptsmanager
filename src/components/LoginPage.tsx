@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,86 +9,39 @@ import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png
 import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 // @ts-ignore - TypeScript module resolution for JS file
 import { getParentById, initializeLocalStorage } from '../utils/localStorage';
+import { login as apiLogin, getMe } from '../lib/api';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: (role: 'teacher' | 'parent' | 'admin', userData: any) => void;
   onSwitchToSignup: () => void;
+  onSwitchToForgot: () => void;
 }
 
-export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
+export function LoginPage({ onLogin, onSwitchToSignup, onSwitchToForgot }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Admin login with dedicated password
-    if (email.toLowerCase().includes('admin') || email.toLowerCase().includes('principal')) {
-      if (password !== 'admin123') {
-        alert('Invalid admin credentials! Use password: admin123');
-        return;
-      }
-      
-      const adminData = {
-        id: 'A001',
-        name: 'Dr. Folake Adeyemi',
-        email: email || 'admin@faith-life.edu.ng',
-        role: 'Principal'
-      };
-      
-      // Store in localStorage
-      localStorage.setItem('userRole', 'admin');
-      localStorage.setItem('userData', JSON.stringify(adminData));
-      onLogin('admin', adminData);
-      return;
+  const handleLogin = async () => {
+    setLoading(true);
+    try {
+      const tokenRes = await apiLogin(email, password);
+      // Persist tokens BEFORE calling getMe so requests use the fresh Authorization header
+      localStorage.setItem('authToken', tokenRes.access_token);
+      localStorage.setItem('refreshToken', tokenRes.refresh_token);
+      const me = await getMe(tokenRes.access_token);
+      localStorage.setItem('userRole', me.role);
+      localStorage.setItem('userData', JSON.stringify(me));
+      onLogin(me.role as 'teacher' | 'parent' | 'admin', me);
+    } catch (e: any) {
+      const msg = e?.message || 'Sign in failed. Check your email and password.';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
-
-    // Teacher login
-    if (email.includes('teacher') || email.endsWith('@faith-life.edu.ng')) {
-      const teacherData = {
-        id: 'T001',
-        name: 'Mrs. Adebayo Oluwaseun',
-        email: email || 'oluwaseun.adebayo@faith-life.edu.ng',
-        subjects: ['Mathematics', 'Further Mathematics'],
-        classes: ['JSS1 A', 'JSS2 B', 'SS1 C']
-      };
-      
-      localStorage.setItem('userRole', 'teacher');
-      localStorage.setItem('userData', JSON.stringify(teacherData));
-      onLogin('teacher', teacherData);
-      return;
-    }
-
-    // Parent login (default)
-    initializeLocalStorage(); // Ensure localStorage is initialized
-    
-    let parentData = getParentById('P001'); // Default parent
-    
-    if (!parentData) {
-      // Fallback if localStorage isn't working
-      parentData = {
-        id: 'P001',
-        name: 'Mr. Babatunde Ogunkoya',
-        email: email || 'babatunde.ogunkoya@gmail.com',
-        phone: '+234 803 123 4567',
-        profilePicture: null,
-        children: ['S001', 'S002'],
-        status: 'Active',
-        childrenDetails: [
-          { id: 'S001', name: 'Temilade Ogunkoya', class: 'JSS2 A', rollNo: 'JSS2A/001' },
-          { id: 'S002', name: 'Olumide Ogunkoya', class: 'SS1 B', rollNo: 'SS1B/015' }
-        ]
-      };
-    } else {
-      // Add children details for UI compatibility
-      parentData.childrenDetails = [
-        { id: 'S001', name: 'Temilade Ogunkoya', class: 'JSS2 A', rollNo: 'JSS2A/001' },
-        { id: 'S002', name: 'Olumide Ogunkoya', class: 'SS1 B', rollNo: 'SS1B/015' }
-      ];
-    }
-    
-    localStorage.setItem('userRole', 'parent');
-    localStorage.setItem('userData', JSON.stringify(parentData));
-    onLogin('parent', parentData);
   };
 
   return (
@@ -123,13 +77,24 @@ export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                onClick={() => setShowPassword((s) => !s)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           {/* Remember Me and Forgot Password */}
@@ -150,10 +115,7 @@ export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
             <button 
               type="button"
               className="text-sm text-primary hover:underline font-medium"
-              onClick={() => {
-                // TODO: Implement forgot password functionality
-                alert('Forgot password functionality will be implemented soon!');
-              }}
+              onClick={onSwitchToForgot}
             >
               Forgot password?
             </button>
@@ -162,9 +124,9 @@ export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
           <Button 
             className="w-full" 
             onClick={handleLogin}
-            disabled={!email || !password}
+            disabled={!email || !password || loading}
           >
-            Sign In
+            {loading ? 'Signing In...' : 'Sign In'}
           </Button>
 
           <div className="text-center space-y-2">

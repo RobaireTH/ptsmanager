@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
@@ -8,30 +9,28 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { PhoneInput } from './ui/phone-input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Users, GraduationCap, UserCheck, School, TrendingUp, AlertCircle, Search, Plus, Edit, Trash2, Bell, MessageSquare } from 'lucide-react';
+import { createTeacher, updateTeacher, deleteTeacher, createStudent, createClass, createEvent, createUser, Teacher } from '../lib/api';
 import { 
-  initializeLocalStorage,
-  getTeachers, 
-  getStudents, 
-  getParents,
-  getClasses,
-  getEvents,
-  getMessages,
-  addTeacher, 
-  updateTeacher, 
-  deleteTeacher, 
-  addStudent, 
-  addClass, 
-  addEvent,
-  Teacher,
-  Student,
-  ClassItem,
-  Event,
-  Message
-} from '../utils/localStorage.js';
+  useTeachers,
+  useStudents,
+  useParents,
+  useClasses,
+  useEvents,
+  useMessages,
+  useUsers,
+  useCreateTeacher,
+  useCreateStudent,
+  useCreateClass,
+  useCreateEvent,
+  useDeleteTeacher,
+  useUpdateTeacher
+} from '../lib/hooks';
+import { createTeacherSchema } from '../validation/teacher';
 
 interface AdminDashboardProps {
   userData: {
@@ -44,12 +43,15 @@ interface AdminDashboardProps {
 export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [parents, setParents] = useState<any[]>([]);
-  const [classes, setClasses] = useState<ClassItem[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { data: teachers = [], isLoading: teachersLoading } = useTeachers();
+  const { data: students = [], isLoading: studentsLoading } = useStudents();
+  const { data: parents = [], isLoading: parentsLoading } = useParents();
+  const { data: classes = [], isLoading: classesLoading } = useClasses();
+  const { data: events = [], isLoading: eventsLoading } = useEvents();
+  const { data: messages = [], isLoading: messagesLoading } = useMessages();
+  const { data: users = [], isLoading: usersLoading } = useUsers();
+  const loading = teachersLoading || studentsLoading || parentsLoading || classesLoading || eventsLoading || messagesLoading || usersLoading;
+  const error = undefined; // central toast handles errors
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
@@ -60,7 +62,7 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
     name: '', email: '', phone: '', subjects: '', classes: ''
   });
   const [newStudent, setNewStudent] = useState({
-    name: '', class: '', rollNo: '', parentEmail: '', email: ''
+    name: '', class: '', roll_no: '', parentEmail: '', email: ''
   });
   const [newClass, setNewClass] = useState({
     name: '', teacherId: '', subjects: '', room: '', students: '0'
@@ -69,20 +71,17 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
     title: '', description: '', date: '', time: '', type: 'meeting'
   });
 
-  useEffect(() => {
-    // Initialize localStorage and load data
-    initializeLocalStorage();
-    loadData();
-  }, []);
+  const createTeacherMutation = useCreateTeacher();
+  const createStudentMutation = useCreateStudent();
+  const createClassMutation = useCreateClass();
+  const createEventMutation = useCreateEvent();
+  const deleteTeacherMutation = useDeleteTeacher();
+  const updateTeacherMutation = useUpdateTeacher();
 
-  const loadData = () => {
-    setTeachers(getTeachers());
-    setStudents(getStudents());
-    setParents(getParents());
-    setClasses(getClasses());
-    setEvents(getEvents());
-    setMessages(getMessages());
-  };
+  // Helper accessors for teacher related user data
+  const teacherName = (t: Teacher) => users.find(u=>u.id===t.user_id)?.name || 'Unknown';
+  const teacherEmail = (t: Teacher) => users.find(u=>u.id===t.user_id)?.email || 'Unknown';
+  const teacherStatus = (t: Teacher) => t.status || users.find(u=>u.id===t.user_id)?.status || 'Unknown';
 
   // Calculate dynamic stats
   const schoolStats = {
@@ -94,74 +93,104 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
     averageGrade: 78.5 // Default value, could be calculated from actual data
   };
 
-  const handleAddTeacher = () => {
-    if (!newTeacher.name || !newTeacher.email) return;
+  const handleAddTeacher = async () => {
+    // Validate input
+    const parsed = createTeacherSchema.safeParse(newTeacher);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues.map(i=>i.message).join(', '));
+      return;
+    }
     
-    const teacher = {
-      ...newTeacher,
-      subjects: newTeacher.subjects.split(',').map(s => s.trim()),
-      classes: newTeacher.classes.split(',').map(c => c.trim()),
-      status: 'Active'
-    };
-    
-    if (addTeacher(teacher)) {
-      setTeachers(getTeachers());
+    try {
+      await createTeacherMutation.mutateAsync({
+        name: newTeacher.name,
+        email: newTeacher.email,
+        phone: newTeacher.phone,
+        subjects: newTeacher.subjects.split(',').map(s=>s.trim()).filter(Boolean)
+      });
       setNewTeacher({ name: '', email: '', phone: '', subjects: '', classes: '' });
       setIsAddTeacherOpen(false);
+      toast.success('Teacher added');
+    } catch (err: any) {
+      console.error('Error adding teacher:', err);
+  toast.error(err.message || 'Failed to add teacher');
     }
   };
 
-  const handleDeleteTeacher = (teacherId: string) => {
-    if (deleteTeacher(teacherId)) {
-      setTeachers(getTeachers());
+  const handleDeleteTeacher = async (teacherId: number) => {
+    if (!confirm('Are you sure you want to delete this teacher?')) return;
+    
+    try {
+  await deleteTeacherMutation.mutateAsync(teacherId);
+  toast.success('Teacher deleted');
+    } catch (err: any) {
+      console.error('Error deleting teacher:', err);
+  toast.error(err.message || 'Failed to delete teacher');
     }
   };
 
-  const handleUpdateTeacherStatus = (teacherId: string, status: string) => {
-    if (updateTeacher(teacherId, { status })) {
-      setTeachers(getTeachers());
+  const handleUpdateTeacherStatus = async (teacherId: number, status: string) => {
+    try {
+  await updateTeacherMutation.mutateAsync({ id: teacherId, data: { status } });
+  toast.success('Status updated');
+    } catch (err: any) {
+      console.error('Error updating teacher status:', err);
+  toast.error(err.message || 'Failed to update teacher status');
     }
   };
 
-  const handleAddStudent = () => {
-    if (!newStudent.name || !newStudent.class || !newStudent.rollNo) return;
-    
-    const student = {
-      ...newStudent,
-      parentId: 'P001', // For now, assign to default parent
-      status: 'Active'
-    };
-    
-    if (addStudent(student)) {
-      setStudents(getStudents());
-      setNewStudent({ name: '', class: '', rollNo: '', parentEmail: '', email: '' });
-      setIsAddStudentOpen(false);
+  const handleAddStudent = async () => {
+    if (!newStudent.name) return;
+    try {
+      // Backend model expects class_id & parent_id; currently we only have free-text class field.
+      // For now create without class linkage; later map by name.
+      await createStudentMutation.mutateAsync({
+        name: newStudent.name,
+        roll_no: newStudent.roll_no || undefined,
+        email: newStudent.email || undefined,
+        status: 'active'
+      } as any);
+  setNewStudent({ name: '', class: '', roll_no: '', parentEmail: '', email: '' });
+  setIsAddStudentOpen(false);
+  toast.success('Student added');
+    } catch (e:any) {
+  toast.error(e.message || 'Failed to add student');
     }
   };
 
-  const handleAddClass = () => {
-    if (!newClass.name || !newClass.teacherId) return;
-    
-    const classData = {
-      ...newClass,
-      subjects: newClass.subjects.split(',').map(s => s.trim()),
-      students: parseInt(newClass.students) || 0
-    };
-    
-    if (addClass(classData)) {
-      setClasses(getClasses());
-      setNewClass({ name: '', teacherId: '', subjects: '', room: '', students: '0' });
-      setIsAddClassOpen(false);
+  const handleAddClass = async () => {
+    if (!newClass.name) return;
+    try {
+      await createClassMutation.mutateAsync({
+        name: newClass.name,
+        teacher_id: newClass.teacherId ? Number(newClass.teacherId) : undefined,
+        room: newClass.room || undefined,
+        expected_students: newClass.students ? Number(newClass.students) : 0,
+        subjects: newClass.subjects.split(',').map(s=>s.trim()).filter(Boolean)
+      });
+  setNewClass({ name: '', teacherId: '', subjects: '', room: '', students: '0' });
+  setIsAddClassOpen(false);
+  toast.success('Class added');
+    } catch(e:any){
+  toast.error(e.message || 'Failed to add class');
     }
   };
 
-  const handleAddEvent = () => {
-    if (!newEvent.title || !newEvent.date) return;
-    
-    if (addEvent(newEvent)) {
-      setEvents(getEvents());
-      setNewEvent({ title: '', description: '', date: '', time: '', type: 'meeting' });
-      setIsAddEventOpen(false);
+  const handleAddEvent = async () => {
+    if (!newEvent.title) return;
+    try {
+      await createEventMutation.mutateAsync({
+        title: newEvent.title,
+        description: newEvent.description || undefined,
+        date: newEvent.date || undefined,
+        time: newEvent.time || undefined,
+        type: newEvent.type || 'meeting'
+      });
+  setNewEvent({ title: '', description: '', date: '', time: '', type: 'meeting' });
+  setIsAddEventOpen(false);
+  toast.success('Event added');
+    } catch(e:any){
+  toast.error(e.message || 'Failed to add event');
     }
   };
 
@@ -169,14 +198,15 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   const generateNotifications = () => {
     const notifications = [];
     
-    // Check for low attendance classes
+    // Check for classes with low expected enrollment
     classes.forEach(classItem => {
-      if (classItem.students < 25) {
+      const expected = classItem.expected_students || 0;
+      if (expected > 0 && expected < 25) {
         notifications.push({
-          id: `low-students-${classItem.id}`,
+          id: `low-expected-${classItem.id}`,
           type: 'warning',
-          title: 'Low Student Count',
-          message: `${classItem.name} has only ${classItem.students} students`,
+          title: 'Low Expected Enrollment',
+          message: `${classItem.name} expects only ${expected} students`,
           date: new Date().toISOString().split('T')[0],
           read: false
         });
@@ -184,7 +214,7 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
     });
 
     // Check for teachers on leave
-    const onLeaveTeachers = teachers.filter(t => t.status === 'On Leave');
+  const onLeaveTeachers = teachers.filter(t => (t.status||'').toLowerCase() === 'on_leave');
     if (onLeaveTeachers.length > 0) {
       notifications.push({
         id: 'teachers-on-leave',
@@ -203,19 +233,20 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
     const activities: Array<{time: string, activity: string, type: string}> = [];
     
     // Recent teacher additions
-    teachers.slice(-3).forEach(teacher => {
+  teachers.slice(-3).forEach(() => {
       activities.push({
         time: '10:30 AM',
-        activity: `Teacher profile: ${teacher.name} (${teacher.subjects.join(', ')})`,
+        activity: `Teacher profile updated`,
         type: 'registration'
       });
     });
 
     // Recent student additions
     students.slice(-2).forEach(student => {
+      const cls = classes.find(c => c.id === (student as any).class_id);
       activities.push({
         time: '09:45 AM',
-        activity: `Student enrolled: ${student.name} (${student.class})`,
+        activity: `Student enrolled: ${student.name}${cls ? ` (${cls.name})` : ''}`,
         type: 'registration'
       });
     });
@@ -303,6 +334,30 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
           </div>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="container mx-auto px-4 py-2">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              {error}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Display */}
+      {loading && (
+        <div className="container mx-auto px-4 py-2">
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2"></div>
+              Loading...
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
@@ -483,11 +538,11 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label>Phone</Label>
-                          <Input 
-                            placeholder="Enter phone number" 
+                          <PhoneInput
+                            label="Phone"
+                            placeholder="Enter phone number"
                             value={newTeacher.phone}
-                            onChange={(e) => setNewTeacher({...newTeacher, phone: e.target.value})}
+                            onChange={(value) => setNewTeacher({...newTeacher, phone: value})}
                           />
                         </div>
                         <div className="space-y-2">
@@ -532,52 +587,52 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {teachers.filter(teacher => 
-                        teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        teacher.email.toLowerCase().includes(searchQuery.toLowerCase())
-                      ).map((teacher) => (
+                      {teachers.filter(teacher => {
+                        const name = teacherName(teacher).toLowerCase();
+                        const email = teacherEmail(teacher).toLowerCase();
+                        const q = searchQuery.toLowerCase();
+                        return name.includes(q) || email.includes(q);
+                      }).map((teacher) => (
                         <TableRow key={teacher.id}>
                           <TableCell>
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src="" alt={teacher.name} />
+                              <AvatarImage src="" alt={teacherName(teacher)} />
                               <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                {getInitials(teacher.name)}
+                                {getInitials(teacherName(teacher))}
                               </AvatarFallback>
                             </Avatar>
                           </TableCell>
                           <TableCell className="font-medium">
                             <div>
-                              <p>{teacher.name}</p>
-                              <p className="text-xs text-muted-foreground sm:hidden">{teacher.subjects.join(', ')}</p>
+                              <p>{teacherName(teacher)}</p>
+                              <p className="text-xs text-muted-foreground sm:hidden">{(teacher.subjects||[]).join(', ')}</p>
                             </div>
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             <div className="flex flex-wrap gap-1">
-                              {teacher.subjects.map((subject, idx) => (
+                              {(teacher.subjects||[]).map((subject, idx) => (
                                 <Badge key={idx} variant="secondary" className="text-xs">{subject}</Badge>
                               ))}
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
                             <div className="flex flex-wrap gap-1">
-                              {teacher.classes.map((cls, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs">{cls}</Badge>
-                              ))}
+                              {/* classes not implemented */}
                             </div>
                           </TableCell>
-                          <TableCell className="hidden lg:table-cell">{teacher.email}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{teacherEmail(teacher)}</TableCell>
                           <TableCell>
                             <Select
-                              value={teacher.status}
+                              value={teacherStatus(teacher)}
                               onValueChange={(value: string) => handleUpdateTeacherStatus(teacher.id, value)}
                             >
                               <SelectTrigger className="w-[100px]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Active">Active</SelectItem>
-                                <SelectItem value="On Leave">On Leave</SelectItem>
-                                <SelectItem value="Suspended">Suspended</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="on_leave">On Leave</SelectItem>
+                                <SelectItem value="suspended">Suspended</SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
@@ -649,8 +704,8 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                             <Label>Roll Number</Label>
                             <Input 
                               placeholder="e.g., SS1A/001" 
-                              value={newStudent.rollNo}
-                              onChange={(e) => setNewStudent({...newStudent, rollNo: e.target.value})}
+                              value={newStudent.roll_no}
+                              onChange={(e) => setNewStudent({...newStudent, roll_no: e.target.value})}
                             />
                           </div>
                           <div className="space-y-2">
@@ -700,8 +755,8 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     <TableBody>
                       {students.filter(student => 
                         student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        student.class.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        student.rollNo.toLowerCase().includes(searchQuery.toLowerCase())
+                        (classes.find(c=>c.id===student.class_id)?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (student.roll_no || '').toLowerCase().includes(searchQuery.toLowerCase())
                       ).map((student) => (
                         <TableRow key={student.id}>
                           <TableCell>
@@ -715,13 +770,13 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                           <TableCell className="font-medium">
                             <div>
                               <p>{student.name}</p>
-                              <p className="text-xs text-muted-foreground sm:hidden">{student.class}</p>
+                              <p className="text-xs text-muted-foreground sm:hidden">{classes.find(c=>c.id===student.class_id)?.name || '—'}</p>
                             </div>
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
-                            <Badge variant="outline">{student.class}</Badge>
+                            <Badge variant="outline">{classes.find(c=>c.id===student.class_id)?.name || 'Unassigned'}</Badge>
                           </TableCell>
-                          <TableCell className="hidden md:table-cell">{student.rollNo}</TableCell>
+                          <TableCell className="hidden md:table-cell">{student.roll_no}</TableCell>
                           <TableCell className="hidden lg:table-cell">{student.email}</TableCell>
                           <TableCell>
                             <Badge variant="default">{student.status}</Badge>
@@ -858,8 +913,8 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                               </SelectTrigger>
                               <SelectContent>
                                 {teachers.map((teacher) => (
-                                  <SelectItem key={teacher.id} value={teacher.id}>
-                                    {teacher.name}
+                                  <SelectItem key={teacher.id} value={String(teacher.id)}>
+                                    {teacherName(teacher)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -918,31 +973,36 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {classes.filter(classItem => 
-                        classItem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        (classItem.teacherName && classItem.teacherName.toLowerCase().includes(searchQuery.toLowerCase()))
-                      ).map((classItem) => (
+                      {classes.filter(classItem => {
+                        const teacherUser = users.find(u=>u.id===classItem.teacher_id);
+                        const teacherNameSearch = teacherUser?.name?.toLowerCase() || '';
+                        const q = searchQuery.toLowerCase();
+                        return classItem.name.toLowerCase().includes(q) || teacherNameSearch.includes(q);
+                      }).map((classItem) => {
+                        const teacherUser = users.find(u=>u.id===classItem.teacher_id);
+                        const tName = teacherUser?.name || 'No teacher assigned';
+                        return (
                         <TableRow key={classItem.id}>
                           <TableCell className="font-medium">
                             <div>
                               <p>{classItem.name}</p>
                               <p className="text-xs text-muted-foreground sm:hidden">
-                                {classItem.teacherName || 'No teacher assigned'}
+                                {tName}
                               </p>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="secondary">{classItem.students} students</Badge>
+                            <Badge variant="secondary">{classItem.expected_students || 0} expected</Badge>
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
-                            {classItem.teacherName || 'No teacher assigned'}
+                            {tName}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
                             <div className="flex flex-wrap gap-1">
-                              {classItem.subjects.slice(0, 3).map((subject, idx) => (
+                              {(classItem.subjects||[]).slice(0, 3).map((subject, idx) => (
                                 <Badge key={idx} variant="outline" className="text-xs">{subject}</Badge>
                               ))}
-                              {classItem.subjects.length > 3 && (
+                              {(classItem.subjects && classItem.subjects.length > 3) && (
                                 <Badge variant="outline" className="text-xs">
                                   +{classItem.subjects.length - 3} more
                                 </Badge>
@@ -961,7 +1021,8 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -1149,9 +1210,9 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                             <div className="flex justify-between items-start">
                               <div>
                                 <p className="font-medium">{message.subject}</p>
-                                <p className="text-muted-foreground">To: {message.recipient}</p>
+                                <p className="text-muted-foreground">To: {message.recipient_role || '—'}</p>
                               </div>
-                              <span className="text-xs text-muted-foreground">{message.date}</span>
+                              <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleString()}</span>
                             </div>
                           </div>
                         ))}

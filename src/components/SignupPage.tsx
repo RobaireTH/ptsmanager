@@ -1,12 +1,15 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { UserCheck, Users, Shield } from 'lucide-react';
+import { PhoneInput } from './ui/phone-input';
+import { UserCheck, Users, Eye, EyeOff } from 'lucide-react';
 import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
 import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
+import { createUser, login as apiLogin, getMe } from '../lib/api';
 
 interface SignupPageProps {
   onLogin: (role: 'teacher' | 'parent' | 'admin', userData: any) => void;
@@ -20,24 +23,27 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
     password: '',
     confirmPassword: '',
     phone: '',
-    role: '' as 'teacher' | 'parent' | 'admin' | ''
+    role: '' as 'teacher' | 'parent' | ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const roleIcons = {
     teacher: UserCheck,
     parent: Users,
-    admin: Shield
-  };
+  } as const;
 
   const roleDescriptions = {
     teacher: "Access student grades, class schedules, and educational resources",
     parent: "Monitor your child's progress, attendance, and school activities",
-    admin: "Manage school operations, staff, and administrative functions"
-  };
+  } as const;
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const passwordMeetsPolicy = formData.password.length >= 8 && /[a-z]/.test(formData.password) && /[A-Z]/.test(formData.password) && /\d/.test(formData.password);
 
   const isFormValid = 
     formData.name.trim() !== '' &&
@@ -45,40 +51,39 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
     formData.password.trim() !== '' &&
     formData.confirmPassword.trim() !== '' &&
     formData.role !== '' &&
-    formData.password === formData.confirmPassword;
+    formData.password === formData.confirmPassword &&
+    passwordMeetsPolicy;
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!isFormValid || !formData.role) return;
 
-    // Mock user data based on selected role
-    const mockUserData = {
-      teacher: {
-        id: 'T001',
-        name: formData.name || 'Mrs. Adebayo Oluwaseun',
-        email: formData.email || 'oluwaseun.adebayo@faith-life.edu.ng',
-        subjects: ['Mathematics', 'Further Mathematics'],
-        classes: ['JSS1 A', 'JSS2 B', 'SS1 C']
-      },
-      parent: {
-        id: 'P001',
-        name: formData.name || 'Mr. Babatunde Ogunkoya',
-        email: formData.email || 'babatunde.ogunkoya@gmail.com',
-        phone: formData.phone || '+234 803 123 4567',
-        children: [
-          { id: 'S001', name: 'Temilade Ogunkoya', class: 'JSS2 A', rollNo: 'JSS2A/001' },
-          { id: 'S002', name: 'Olumide Ogunkoya', class: 'SS1 B', rollNo: 'SS1B/015' }
-        ]
-      },
-      admin: {
-        id: 'A001',
-        name: formData.name || 'Dr. Folake Adeyemi',
-        email: formData.email || 'admin@faith-life.edu.ng',
-        role: 'Principal'
-      }
-    };
+    setLoading(true);
+    try {
+      // Create user via backend
+      await createUser({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      });
 
-    const role = formData.role as 'teacher' | 'parent' | 'admin';
-    onLogin(role, mockUserData[role]);
+      // Auto-login
+      const tokenRes = await apiLogin(formData.email, formData.password);
+      // Persist tokens BEFORE fetching profile to ensure correct Authorization
+      localStorage.setItem('authToken', tokenRes.access_token);
+      localStorage.setItem('refreshToken', tokenRes.refresh_token);
+      const me = await getMe(tokenRes.access_token);
+
+      localStorage.setItem('userRole', me.role);
+      localStorage.setItem('userData', JSON.stringify(me));
+
+      onLogin(me.role as 'teacher' | 'parent' | 'admin', me);
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to sign up. Please try again.';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -145,37 +150,61 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
           </div>
 
           {formData.role === 'parent' && (
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                placeholder="Enter your phone number"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-              />
-            </div>
+            <PhoneInput
+              id="phone"
+              label="Phone Number"
+              placeholder="Enter your phone number"
+              value={formData.phone}
+              onChange={(value) => handleInputChange('phone', value)}
+              required
+            />
           )}
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Create a password"
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                onClick={() => setShowPassword((s) => !s)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {formData.password && !passwordMeetsPolicy && (
+              <p className="text-destructive text-sm">Password must be at least 8 characters and include lowercase, uppercase letters, and numbers</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirm ? 'text' : 'password'}
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                onClick={() => setShowConfirm((s) => !s)}
+              >
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {formData.confirmPassword && formData.password !== formData.confirmPassword && (
               <p className="text-destructive text-sm">Passwords do not match</p>
             )}
@@ -184,9 +213,9 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
           <Button 
             className="w-full" 
             onClick={handleSignup}
-            disabled={!isFormValid}
+            disabled={!isFormValid || loading}
           >
-            Create Account
+            {loading ? 'Creating Account...' : 'Create Account'}
           </Button>
 
           <div className="text-center">

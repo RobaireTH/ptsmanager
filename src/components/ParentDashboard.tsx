@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
@@ -9,15 +10,19 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { PhoneInput } from './ui/phone-input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { GraduationCap, MessageSquare, Download, Send, TrendingUp, Calendar, Bell, Camera } from 'lucide-react';
-// @ts-ignore - TypeScript module resolution for JS file
 import { 
-  getParentById, 
-  updateParent, 
-  updateParentProfilePicture, 
-  convertFileToBase64 
-} from '../utils/localStorage';
+  getParents,
+  updateParent,
+  getStudents,
+  getEvents,
+  getMessages,
+  Student,
+  Event,
+  Message
+} from '../lib/api';
 
 interface ParentDashboardProps {
   userData: any;
@@ -26,22 +31,62 @@ interface ParentDashboardProps {
 
 export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedChild, setSelectedChild] = useState(userData.childrenDetails?.[0] || userData.children?.[0]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedChild, setSelectedChild] = useState<Student | null>(null);
   const [selectedTerm, setSelectedTerm] = useState('1st-term');
   const [newMessage, setNewMessage] = useState('');
-  const [parentData, setParentData] = useState(userData);
+  const [parentData, setParentData] = useState({
+    name: userData.name || '',
+    email: userData.email || '',
+    phone: userData.phone || '',
+    profilePicture: userData.profilePicture || null
+  });
   const [profilePicture, setProfilePicture] = useState(userData.profilePicture || null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  const convertFileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load parent data from localStorage on mount
+  // Load data from API on mount
   useEffect(() => {
-    const storedParent = getParentById(userData.id);
-    if (storedParent) {
-      setParentData(storedParent);
-      setProfilePicture(storedParent.profilePicture);
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [studentsData, eventsData, messagesData] = await Promise.all([
+        getStudents(),
+        getEvents(),
+        getMessages()
+      ]);
+      
+      setStudents(studentsData);
+      setEvents(eventsData);
+      setMessages(messagesData);
+      
+      // Find children for this parent
+      const parentStudents = studentsData.filter(student => student.parent_id === userData.id);
+      if (parentStudents.length > 0) {
+        setSelectedChild(parentStudents[0]);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load data');
+      console.error('Error loading data:', err);
+    } finally {
+      setLoading(false);
     }
-  }, [userData.id]);
+  };
 
   const handleProfilePictureChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -49,50 +94,53 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
 
     // Check file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert('File size must be less than 2MB');
+  toast.error('File size must be less than 2MB');
       return;
     }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select a valid image file');
+  toast.error('Please select a valid image file');
       return;
     }
 
     try {
       setIsUpdatingProfile(true);
-      const base64Data = await convertFileToBase64(file);
-      
-      // Update in localStorage
-      const success = updateParentProfilePicture(userData.id, base64Data);
-      
-      if (success) {
-        setProfilePicture(base64Data);
-        // Update parent data
-        const updatedParent = getParentById(userData.id);
-        if (updatedParent) {
-          setParentData(updatedParent);
-        }
-      } else {
-        alert('Failed to update profile picture');
-      }
+  const base64Data = await convertFileToBase64(file);
+  // For now just store locally (future: upload endpoint)
+  setProfilePicture(base64Data);
+  setParentData(prev => ({ ...prev, profilePicture: base64Data }));
     } catch (error) {
-      alert('Error uploading image');
+  toast.error('Error uploading image');
       console.error('Profile picture upload error:', error);
     } finally {
       setIsUpdatingProfile(false);
     }
   };
 
-  const handleUpdateProfile = (updates: any) => {
-    const success = updateParent(userData.id, updates);
-    if (success) {
-      const updatedParent = getParentById(userData.id);
-      if (updatedParent) {
-        setParentData(updatedParent);
+  const handleUpdateProfile = async (updates: any) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Find the parent record for this user
+      const parentRecord = await getParents();
+      const parent = parentRecord.find(p => p.user_id === userData.id);
+      
+      if (parent) {
+        await updateParent(parent.id, updates);
+        setParentData(prev => ({ ...prev, ...updates }));
+        return true;
+      } else {
+        setError('Parent record not found');
+        return false;
       }
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile');
+      console.error('Error updating profile:', err);
+      return false;
+    } finally {
+      setLoading(false);
     }
-    return success;
   };
 
   // Mock data for selected child
@@ -111,12 +159,6 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
     { month: 'October', present: 20, absent: 0, total: 20, percentage: 100 },
   ];
 
-  const messages = [
-    { id: 'M001', from: 'Mrs. Adebayo (Mathematics Teacher)', subject: `${selectedChild.name}'s Excellent Progress`, content: `${selectedChild.name} has shown remarkable improvement in Mathematics this term.`, date: '2024-01-14', status: 'unread' },
-    { id: 'M002', from: 'Admin Office', subject: 'Parent-Teacher Meeting', content: 'Upcoming parent-teacher meetings scheduled for next week.', date: '2024-01-13', status: 'read' },
-    { id: 'M003', from: 'Mr. Ogundimu (English Teacher)', subject: 'Reading Assignment', content: `Please ensure ${selectedChild.name} completes the assigned reading over the weekend.`, date: '2024-01-12', status: 'read' },
-  ];
-
   const upcomingEvents = [
     { date: '2024-01-18', event: 'Parent-Teacher Meeting', time: '2:00 PM' },
     { date: '2024-01-22', event: 'Inter-House Sports', time: '10:00 AM' },
@@ -129,7 +171,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
     { id: 'N003', title: 'School event notification', content: 'Inter-house sports next week', time: '1 day ago', read: true },
   ];
 
-  const unreadCount = messages.filter(msg => msg.status === 'unread').length;
+  const unreadCount = 0; // backend Message currently lacks status field
   const unreadNotifications = notifications.filter(notif => !notif.read).length;
 
   const getGradeColor = (grade: string) => {
@@ -161,10 +203,10 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <p className="text-muted-foreground text-sm sm:text-base">Parent Dashboard</p>
                   {(userData.childrenDetails || userData.children)?.length > 1 && (
-                    <Select value={selectedChild.id} onValueChange={(value: string) => {
+                    <Select value={selectedChild?.id || ""} onValueChange={(value: string) => {
                       const children = userData.childrenDetails || userData.children || [];
                       const child = children.find((c: any) => c.id === value);
-                      setSelectedChild(child);
+                      setSelectedChild(child || null);
                     }}>
                       <SelectTrigger className="w-full sm:w-48 h-8">
                         <SelectValue />
@@ -227,7 +269,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                 <GraduationCap className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-muted-foreground">Current Class</p>
-                  <p className="font-medium">{selectedChild.class}</p>
+                  <p className="font-medium">{selectedChild?.class ?? (selectedChild?.class_id ? `Class ID ${selectedChild.class_id}` : '—')}</p>
                 </div>
               </div>
             </CardContent>
@@ -291,7 +333,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Academic Performance</CardTitle>
-                  <CardDescription>Latest test results and grades for {selectedChild.name}</CardDescription>
+                  <CardDescription>Latest test results and grades {selectedChild ? `for ${selectedChild.name}` : ''}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -314,7 +356,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>Attendance Summary</CardTitle>
-                  <CardDescription>Monthly attendance overview for {selectedChild.name}</CardDescription>
+                  <CardDescription>Monthly attendance overview {selectedChild ? `for ${selectedChild.name}` : ''}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -366,7 +408,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle>Academic Results - {selectedChild.name}</CardTitle>
+                    <CardTitle>Academic Results {selectedChild ? `- ${selectedChild.name}` : ''}</CardTitle>
                     <CardDescription>View and download your child's academic performance</CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -420,7 +462,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                 </Table>
 
                 <div className="mt-6 p-4 bg-muted rounded-lg">
-                  <h3 className="font-medium mb-2">Term Summary for {selectedChild.name}</h3>
+                  <h3 className="font-medium mb-2">Term Summary {selectedChild ? `for ${selectedChild.name}` : ''}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <p className="text-muted-foreground">Overall Average</p>
@@ -452,20 +494,17 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   <CardContent>
                     <div className="space-y-4">
                       {messages.map((message) => (
-                        <div key={message.id} className={`border rounded-lg p-4 space-y-2 ${message.status === 'unread' ? 'bg-accent/20 border-primary/20' : ''}`}>
+                        <div key={message.id} className="border rounded-lg p-4 space-y-2">
                           <div className="flex justify-between items-start">
                             <div>
                               <p className="font-medium">{message.subject}</p>
-                              <p className="text-muted-foreground">{message.from}</p>
+                              <p className="text-muted-foreground text-xs">ID: {message.id}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-muted-foreground">{message.date}</p>
-                              {message.status === 'unread' && (
-                                <Badge variant="destructive">New</Badge>
-                              )}
+                              <p className="text-muted-foreground text-xs">{new Date(message.created_at).toLocaleString()}</p>
                             </div>
                           </div>
-                          <p className="text-sm">{message.content}</p>
+                          <p className="text-sm whitespace-pre-wrap">{message.body || '—'}</p>
                           <Button size="sm" variant="outline">Reply</Button>
                         </div>
                       ))}
@@ -495,15 +534,15 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   </div>
                   <div className="space-y-2">
                     <Label>Regarding Child</Label>
-                    <Select value={selectedChild.id} onValueChange={(value: string) => {
-                      const child = userData.children.find((c: any) => c.id === value);
-                      setSelectedChild(child);
+                    <Select value={selectedChild?.id || ''} onValueChange={(value: string) => {
+                      const child = (userData.children || []).find((c: any) => c.id === value);
+                      setSelectedChild(child || null);
                     }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {userData.children.map((child: any) => (
+                        {(userData.childrenDetails || userData.children || []).map((child: any) => (
                           <SelectItem key={child.id} value={child.id}>
                             {child.name} ({child.class})
                           </SelectItem>
@@ -587,23 +626,21 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                         onChange={(e) => setParentData({...parentData, email: e.target.value})}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Phone Number</Label>
-                      <Input 
-                        defaultValue={parentData.phone || "+234 803 123 4567"} 
-                        onChange={(e) => setParentData({...parentData, phone: e.target.value})}
-                      />
-                    </div>
-                    <Button onClick={() => {
-                      const success = handleUpdateProfile({
+                    <PhoneInput
+                      label="Phone Number"
+                      value={parentData.phone || "+234 803 123 4567"}
+                      onChange={(value) => setParentData({...parentData, phone: value})}
+                    />
+                    <Button onClick={async () => {
+                      const success = await handleUpdateProfile({
                         name: parentData.name,
                         email: parentData.email,
                         phone: parentData.phone
                       });
                       if (success) {
-                        alert('Profile updated successfully!');
+                        toast.success('Profile updated successfully!');
                       } else {
-                        alert('Failed to update profile');
+                        toast.error('Failed to update profile');
                       }
                     }}>
                       Update Profile
