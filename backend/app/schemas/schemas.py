@@ -148,10 +148,39 @@ class MessageBase(BaseModel):
 class MessageCreate(MessageBase):
     sender_id: int
 
-class Message(MessageBase):
+class Message(BaseModel):
     id: int
     sender_id: int
     created_at: str
+    class Config:
+        from_attributes = True
+
+# Results
+class ResultBase(BaseModel):
+    student_id: int
+    class_id: Optional[int] = None
+    teacher_id: int
+    subject: str
+    term: str
+    score: int
+    grade: str
+    date: Optional[str] = None
+    comments: Optional[str] = None
+
+class ResultCreate(ResultBase):
+    pass
+
+class ResultUpdate(BaseModel):
+    subject: Optional[str] = None
+    term: Optional[str] = None
+    score: Optional[int] = None
+    grade: Optional[str] = None
+    date: Optional[str] = None
+    comments: Optional[str] = None
+
+class Result(ResultBase):
+    id: int
+    created_at: Optional[str] = None
     class Config:
         from_attributes = True
 

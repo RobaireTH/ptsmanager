@@ -69,6 +69,20 @@ export interface Message {
   created_at: string;
 }
 
+export interface Result {
+  id: number;
+  student_id: number;
+  class_id?: number | null;
+  teacher_id: number;
+  subject: string;
+  term: string;
+  score: number;
+  grade: string;
+  date?: string;
+  comments?: string;
+  created_at?: string;
+}
+
 // Determine API base URL with smart defaults.
 // Priority: window.__API_BASE__ (runtime) ?? VITE env var ?? defaultBase
 // defaultBase = '' (same-origin) in non-localhost browsers, else 'http://localhost:8000' for dev.
@@ -358,5 +372,37 @@ export async function createMessage(data: { subject: string; body?: string; reci
   return request<Message>('/api/messages/', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+// Results
+export async function getResults(params?: { student_id?: number; term?: string; offset?: number; limit?: number }): Promise<Result[]> {
+  const q = new URLSearchParams();
+  if (params?.student_id != null) q.set('student_id', String(params.student_id));
+  if (params?.term) q.set('term', params.term);
+  if (params?.offset != null) q.set('offset', String(params.offset));
+  if (params?.limit != null) q.set('limit', String(params.limit));
+  const qs = q.toString();
+  const path = qs ? `/api/results/?${qs}` : '/api/results/';
+  return request<Result[]>(path);
+}
+
+export async function createResult(data: { student_id: number; class_id?: number | null; subject: string; term: string; score: number; grade: string; date?: string; comments?: string }): Promise<Result> {
+  return request<Result>('/api/results/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateResult(resultId: number, data: Partial<Omit<Result, 'id' | 'student_id' | 'teacher_id' | 'created_at'>>): Promise<Result> {
+  return request<Result>(`/api/results/${resultId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteResult(resultId: number): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/api/results/${resultId}`, {
+    method: 'DELETE',
   });
 }

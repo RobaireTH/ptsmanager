@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
 
-from app.api import users, teachers, students, parents, classes, events, messages, auth
+from app.api import users, teachers, students, parents, classes, events, messages, auth, results
 from app.db.session import Base, engine  # retained for potential metadata access
 from app.models import models  # ensure models imported for Alembic autogenerate if needed
 
@@ -34,6 +34,7 @@ app.include_router(parents.router, prefix="/api")
 app.include_router(classes.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
+app.include_router(results.router, prefix="/api")
 
 @app.get("/health")
 async def health():

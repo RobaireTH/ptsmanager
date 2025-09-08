@@ -12,8 +12,11 @@ import {
   getStudents,
   getClasses,
   getMessages,
+  createResult,
+  getResults,
   Student,
-  Message
+  Message,
+  Result
 } from '../lib/api';
 
 interface TeacherDashboardProps {
@@ -29,6 +32,9 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
   const [students, setStudents] = useState<Student[]>([]);
   // const [classes, setClasses] = useState<Class[]>([]); // reserved for future filtering
   const [messages, setMessages] = useState<Message[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
+  const [isAddingResultFor, setIsAddingResultFor] = useState<Student | null>(null);
+  const [newResult, setNewResult] = useState<{ subject: string; term: string; score: string; grade: string; date: string; comments: string }>({ subject: '', term: '1st-term', score: '', grade: '', date: '', comments: '' });
 
   // Load data from API on mount
   useEffect(() => {
@@ -39,13 +45,15 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
     setLoading(true);
     setError(null);
     try {
-      const [studentsData, _classesData, messagesData] = await Promise.all([
+      const [studentsData, _classesData, messagesData, resultsData] = await Promise.all([
         getStudents(),
         getClasses(),
-        getMessages()
+        getMessages(),
+        getResults()
       ]);
       setStudents(studentsData);
       setMessages(messagesData);
+      setResults(resultsData);
       
   // Could compute teacher-specific classes here later
     } catch (err: any) {
@@ -207,7 +215,7 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
                         <TableCell>
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline">View Profile</Button>
-                            <Button size="sm" variant="outline">Contact Parent</Button>
+                            <Button size="sm" variant="outline" onClick={() => { setIsAddingResultFor(student); setNewResult({ subject: '', term: '1st-term', score: '', grade: '', date: '', comments: '' }); }}>Add Result</Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -287,6 +295,74 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
           {/* Attendance Tab removed */}
         </Tabs>
       </div>
+
+      {/* Add Result Dialog */}
+      {isAddingResultFor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-4">
+            <div>
+              <h3 className="text-lg font-medium">Add Result for {isAddingResultFor.name}</h3>
+              <p className="text-sm text-muted-foreground">Fill in the details below</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Subject</p>
+              <Input value={newResult.subject} onChange={(e)=>setNewResult({...newResult, subject: e.target.value})} placeholder="e.g., Mathematics" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Term</p>
+                <select className="w-full border rounded h-9 px-2" value={newResult.term} onChange={(e)=>setNewResult({...newResult, term: e.target.value})}>
+                  <option value="1st-term">1st Term</option>
+                  <option value="2nd-term">2nd Term</option>
+                  <option value="3rd-term">3rd Term</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Score</p>
+                <Input type="number" value={newResult.score} onChange={(e)=>setNewResult({...newResult, score: e.target.value})} placeholder="e.g., 85" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Grade</p>
+                <Input value={newResult.grade} onChange={(e)=>setNewResult({...newResult, grade: e.target.value})} placeholder="e.g., A" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Date (optional)</p>
+                <Input type="date" value={newResult.date} onChange={(e)=>setNewResult({...newResult, date: e.target.value})} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Comments (optional)</p>
+              <Textarea value={newResult.comments} onChange={(e)=>setNewResult({...newResult, comments: e.target.value})} placeholder="Teacher remarks" rows={3} />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={()=>setIsAddingResultFor(null)}>Cancel</Button>
+              <Button onClick={async ()=>{
+                if (!newResult.subject || !newResult.term || !newResult.score || !newResult.grade) return;
+                try {
+                  await createResult({
+                    student_id: isAddingResultFor.id,
+                    class_id: isAddingResultFor.class_id || undefined,
+                    subject: newResult.subject,
+                    term: newResult.term,
+                    score: Number(newResult.score),
+                    grade: newResult.grade,
+                    date: newResult.date || undefined,
+                    comments: newResult.comments || undefined,
+                  });
+                  // reload results list
+                  const fresh = await getResults();
+                  setResults(fresh);
+                  setIsAddingResultFor(null);
+                } catch(e:any){
+                  console.error(e);
+                }
+              }}>Save</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

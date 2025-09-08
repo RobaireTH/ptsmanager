@@ -19,9 +19,11 @@ import {
   getStudents,
   getEvents,
   getMessages,
+  getResults,
   Student,
   Event,
-  Message
+  Message,
+  Result
 } from '../lib/api';
 
 interface ParentDashboardProps {
@@ -61,6 +63,22 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const fetchResults = async () => {
+      try {
+        if (selectedChild) {
+          const results = await getResults({ student_id: Number(selectedChild.id) });
+          setChildResults(results.map(r => ({ id: r.id, subject: r.subject, term: r.term, score: r.score, grade: r.grade, date: r.date })));
+        } else {
+          setChildResults([]);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchResults();
+  }, [selectedChild]);
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -75,8 +93,8 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
       setEvents(eventsData);
       setMessages(messagesData);
       
-      // Find children for this parent
-      const parentStudents = studentsData.filter(student => student.parent_id === userData.id);
+      // Students endpoint is scoped by backend for parent; use as-is
+      const parentStudents = studentsData;
       if (parentStudents.length > 0) {
         setSelectedChild(parentStudents[0]);
       }
@@ -144,13 +162,10 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
   };
 
   // Mock data for selected child
-  const childResults = [
-    { id: 'R001', subject: 'Mathematics', term: '1st Term', score: 85, grade: 'A', teacher: 'Mrs. Adebayo', date: '2024-01-10' },
-    { id: 'R002', subject: 'English Language', term: '1st Term', score: 78, grade: 'B', teacher: 'Mr. Ogundimu', date: '2024-01-10' },
-    { id: 'R003', subject: 'Physics', term: '1st Term', score: 92, grade: 'A+', teacher: 'Dr. Oladele', date: '2024-01-10' },
-    { id: 'R004', subject: 'Chemistry', term: '1st Term', score: 88, grade: 'A', teacher: 'Mrs. Fagbemi', date: '2024-01-10' },
-    { id: 'R005', subject: 'Yoruba Language', term: '1st Term', score: 82, grade: 'A-', teacher: 'Baba Ajayi', date: '2024-01-10' },
-  ];
+  // Results for selected child fetched from API
+  const [childResults, setChildResults] = useState<{
+    id: number; subject: string; term: string; score: number; grade: string; teacher?: string; date?: string
+  }[]>([]);
 
   const attendanceData = [
     { month: 'January', present: 18, absent: 2, total: 20, percentage: 90 },
@@ -445,14 +460,14 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                     {childResults.map((result) => (
                       <TableRow key={result.id}>
                         <TableCell className="font-medium">{result.subject}</TableCell>
-                        <TableCell>{result.teacher}</TableCell>
+                        <TableCell>{result.teacher || '—'}</TableCell>
                         <TableCell>{result.score}%</TableCell>
                         <TableCell>
                           <Badge className={getGradeColor(result.grade)} variant="outline">
                             {result.grade}
                           </Badge>
                         </TableCell>
-                        <TableCell>{result.date}</TableCell>
+                        <TableCell>{result.date || '—'}</TableCell>
                         <TableCell>
                           <Button size="sm" variant="outline">View Details</Button>
                         </TableCell>

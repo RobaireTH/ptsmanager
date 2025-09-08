@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Users, GraduationCap, UserCheck, School, TrendingUp, AlertCircle, Search, Plus, Edit, Trash2, Bell, MessageSquare } from 'lucide-react';
-import { createTeacher, updateTeacher, deleteTeacher, createStudent, createClass, createEvent, createUser, Teacher } from '../lib/api'; // createUser reserved for future admin user creation
+import { createTeacher, updateTeacher, deleteTeacher, createStudent, createClass, createEvent, createUser, updateStudent, updateClass, createParent, Teacher } from '../lib/api'; // createUser reserved for future admin user creation
 import { 
   useTeachers,
   useStudents,
@@ -28,8 +28,10 @@ import {
   useCreateClass,
   useCreateEvent,
   useDeleteTeacher,
-  useUpdateTeacher
+  useUpdateTeacher,
+  qk
 } from '../lib/hooks';
+import { useQueryClient } from '@tanstack/react-query';
 import { createTeacherSchema } from '../validation/teacher';
 
 interface AdminDashboardProps {
@@ -56,13 +58,15 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [isEditStudentOpen, setIsEditStudentOpen] = useState(false);
+  const [isEditClassOpen, setIsEditClassOpen] = useState(false);
 
   // Form states
   const [newTeacher, setNewTeacher] = useState({
     name: '', email: '', phone: '', subjects: '', classes: ''
   });
   const [newStudent, setNewStudent] = useState({
-    name: '', class: '', roll_no: '', parentEmail: '', email: ''
+    name: '', classId: '', roll_no: '', parentEmail: '', email: ''
   });
   const [newClass, setNewClass] = useState({
     name: '', teacherId: '', subjects: '', room: '', students: '0'
@@ -77,6 +81,11 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   const createEventMutation = useCreateEvent();
   const deleteTeacherMutation = useDeleteTeacher();
   const updateTeacherMutation = useUpdateTeacher();
+  const qc = useQueryClient();
+
+  // Editing state
+  const [editStudent, setEditStudent] = useState<{ id: number; name: string; classId: string; parentEmail: string; roll_no?: string; email?: string } | null>(null);
+  const [editClass, setEditClass] = useState<{ id: number; name: string; teacherId: string } | null>(null);
 
   // Helper accessors for teacher related user data
   const teacherName = (t: Teacher) => users.find(u=>u.id===t.user_id)?.name || 'Unknown';
@@ -142,19 +151,38 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   const handleAddStudent = async () => {
     if (!newStudent.name) return;
     try {
-      // Backend model expects class_id & parent_id; currently we only have free-text class field.
-      // For now create without class linkage; later map by name.
+      let parentId: number | undefined = undefined;
+      const parentEmail = (newStudent.parentEmail || '').trim().toLowerCase();
+      if (parentEmail) {
+        const user = users.find(u => u.email.toLowerCase() === parentEmail && u.role === 'parent');
+        if (!user) {
+          toast.error('Parent user not found for provided email');
+          return;
+        }
+        let parent = parents.find(p => p.user_id === user.id);
+        if (!parent) {
+          // Create parent record (admin-only)
+          parent = await createParent({ user_id: user.id });
+          await qc.invalidateQueries({ queryKey: qk.parents });
+        }
+        parentId = parent.id;
+      }
+
+      const classIdNum = newStudent.classId ? Number(newStudent.classId) : undefined;
+
       await createStudentMutation.mutateAsync({
         name: newStudent.name,
+        class_id: classIdNum,
         roll_no: newStudent.roll_no || undefined,
+        parent_id: parentId,
         email: newStudent.email || undefined,
         status: 'active'
       } as any);
-  setNewStudent({ name: '', class: '', roll_no: '', parentEmail: '', email: '' });
-  setIsAddStudentOpen(false);
-  toast.success('Student added');
+      setNewStudent({ name: '', classId: '', roll_no: '', parentEmail: '', email: '' });
+      setIsAddStudentOpen(false);
+      toast.success('Student added');
     } catch (e:any) {
-  toast.error(e.message || 'Failed to add student');
+      toast.error(e.message || 'Failed to add student');
     }
   };
 
@@ -191,6 +219,62 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   toast.success('Event added');
     } catch(e:any){
   toast.error(e.message || 'Failed to add event');
+    }
+  };
+
+  // Save edits for student (assign class and link parent)
+  const handleSaveStudentEdit = async () => {
+    if (!editStudent) return;
+    try {
+      // Resolve parent linkage
+      let parentIdPayload: number | null | undefined = undefined;
+      const parentEmail = (editStudent.parentEmail || '').trim().toLowerCase();
+      if (parentEmail === '') {
+        parentIdPayload = null; // unlink
+      } else if (parentEmail) {
+        const user = users.find(u => u.email.toLowerCase() === parentEmail && u.role === 'parent');
+        if (!user) {
+          toast.error('Parent user not found for provided email');
+          return;
+        }
+        let parent = parents.find(p => p.user_id === user.id);
+        if (!parent) {
+          parent = await createParent({ user_id: user.id });
+          await qc.invalidateQueries({ queryKey: qk.parents });
+        }
+        parentIdPayload = parent.id;
+      }
+
+      const classIdPayload = editStudent.classId ? Number(editStudent.classId) : null;
+
+      await updateStudent(editStudent.id, {
+        class_id: classIdPayload as any,
+        parent_id: parentIdPayload as any,
+        roll_no: editStudent.roll_no,
+        email: editStudent.email,
+      });
+
+      await qc.invalidateQueries({ queryKey: qk.students });
+      setIsEditStudentOpen(false);
+      setEditStudent(null);
+      toast.success('Student updated');
+    } catch (e:any) {
+      toast.error(e.message || 'Failed to update student');
+    }
+  };
+
+  // Save edits for class (assign teacher)
+  const handleSaveClassEdit = async () => {
+    if (!editClass) return;
+    try {
+      const teacherIdPayload = editClass.teacherId ? Number(editClass.teacherId) : null;
+      await updateClass(editClass.id, { teacher_id: teacherIdPayload as any });
+      await qc.invalidateQueries({ queryKey: qk.classes });
+      setIsEditClassOpen(false);
+      setEditClass(null);
+      toast.success('Class updated');
+    } catch (e:any) {
+      toast.error(e.message || 'Failed to update class');
     }
   };
 
@@ -697,11 +781,21 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                           </div>
                           <div className="space-y-2">
                             <Label>Class</Label>
-                            <Input 
-                              placeholder="e.g., SS1 A" 
-                              value={newStudent.class}
-                              onChange={(e) => setNewStudent({...newStudent, class: e.target.value})}
-                            />
+                            <Select
+                              value={newStudent.classId}
+                              onValueChange={(value: string) => setNewStudent({ ...newStudent, classId: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select class" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {classes.map((c) => (
+                                  <SelectItem key={c.id} value={String(c.id)}>
+                                    {c.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -793,7 +887,20 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline">
+                              <Button size="sm" variant="outline" onClick={() => {
+                                // Pre-fill edit form
+                                const parent = parents.find(p => p.id === (student as any).parent_id);
+                                const parentUserEmail = parent ? (users.find(u => u.id === parent.user_id)?.email || '') : '';
+                                setEditStudent({
+                                  id: student.id,
+                                  name: student.name,
+                                  classId: student.class_id ? String(student.class_id) : '',
+                                  parentEmail: parentUserEmail,
+                                  roll_no: student.roll_no,
+                                  email: student.email || ''
+                                });
+                                setIsEditStudentOpen(true);
+                              }}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button size="sm" variant="outline">
@@ -1038,7 +1145,10 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                           <TableCell className="hidden lg:table-cell">{classItem.room}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline">
+                              <Button size="sm" variant="outline" onClick={() => {
+                                setEditClass({ id: classItem.id, name: classItem.name, teacherId: classItem.teacher_id ? String(classItem.teacher_id) : '' });
+                                setIsEditClassOpen(true);
+                              }}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button size="sm" variant="outline">
@@ -1255,6 +1365,110 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Student Dialog */}
+        <Dialog open={isEditStudentOpen} onOpenChange={setIsEditStudentOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Student</DialogTitle>
+              <DialogDescription>Assign a class and link to a parent</DialogDescription>
+            </DialogHeader>
+            {editStudent && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Class</Label>
+                  <Select
+                    value={editStudent.classId}
+                    onValueChange={(value: string) => setEditStudent({ ...editStudent, classId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classes.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Parent Email (leave blank to unlink)</Label>
+                  <Input
+                    type="email"
+                    placeholder="parent@example.com"
+                    value={editStudent.parentEmail}
+                    onChange={(e) => setEditStudent({ ...editStudent, parentEmail: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Roll Number</Label>
+                    <Input
+                      placeholder="e.g., SS1A/001"
+                      value={editStudent.roll_no || ''}
+                      onChange={(e) => setEditStudent({ ...editStudent, roll_no: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Student Email</Label>
+                    <Input
+                      type="email"
+                      placeholder="student@school.edu.ng"
+                      value={editStudent.email || ''}
+                      onChange={(e) => setEditStudent({ ...editStudent, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setIsEditStudentOpen(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveStudentEdit} className="flex-1">Save Changes</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Class Dialog */}
+        <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Class</DialogTitle>
+              <DialogDescription>Assign or change class teacher</DialogDescription>
+            </DialogHeader>
+            {editClass && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Class Teacher</Label>
+                  <Select
+                    value={editClass.teacherId}
+                    onValueChange={(value: string) => setEditClass({ ...editClass, teacherId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select teacher" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teachers.map((t) => (
+                        <SelectItem key={t.id} value={String(t.id)}>
+                          {teacherName(t)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setIsEditClassOpen(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveClassEdit} className="flex-1">Save Changes</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

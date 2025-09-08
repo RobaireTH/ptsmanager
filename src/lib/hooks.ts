@@ -14,11 +14,14 @@ import {
   createEvent,
   deleteTeacher,
   updateTeacher,
+  getResults,
+  createResult,
   Teacher,
   Student,
   Class,
   Event,
   Message,
+  Result,
   UserMe
 } from './api';
 
@@ -30,6 +33,8 @@ export const qk = {
   events: ['events'] as const,
   users: ['users'] as const,
   parents: ['parents'] as const,
+  results: ['results'] as const,
+  resultsByStudent: (studentId: number) => ['results', 'student', studentId] as const,
 };
 
 export function useTeachers() {
@@ -52,6 +57,14 @@ export function useUsers() {
 }
 export function useParents() {
   return useQuery({ queryKey: qk.parents, queryFn: getParents });
+}
+
+export function useResults(params?: { student_id?: number; term?: string; offset?: number; limit?: number }) {
+  return useQuery({ queryKey: qk.results, queryFn: () => getResults(params) });
+}
+
+export function useResultsByStudent(studentId: number) {
+  return useQuery({ queryKey: qk.resultsByStudent(studentId), queryFn: () => getResults({ student_id: studentId }) });
 }
 
 // Example combined mutation: create teacher (user + teacher profile)
@@ -106,5 +119,18 @@ export function useUpdateTeacher() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Teacher> }) => updateTeacher(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.teachers })
+  });
+}
+
+export function useCreateResult() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createResult,
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: qk.results });
+      if ((variables as any)?.student_id) {
+        qc.invalidateQueries({ queryKey: qk.resultsByStudent((variables as any).student_id) });
+      }
+    }
   });
 }

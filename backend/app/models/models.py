@@ -84,3 +84,17 @@ class Message(Base):
     sender_id = Column(Integer, ForeignKey("users.id"))
     recipient_role = Column(String)  # e.g., parent, teacher, admin
     created_at = Column(String)  # ISO timestamp for simplicity
+
+class Result(Base):
+    __tablename__ = "results"
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
+    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    subject = Column(String, nullable=False)
+    term = Column(String, nullable=False)  # e.g., "1st-term", "2nd-term", "3rd-term"
+    score = Column(Integer, nullable=False)
+    grade = Column(String, nullable=False)
+    date = Column(String, nullable=True)  # ISO date string
+    comments = Column(Text, nullable=True)
+    created_at = Column(String, nullable=True)  # ISO timestamp
