@@ -218,9 +218,9 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <p className="text-muted-foreground text-sm sm:text-base">Parent Dashboard</p>
                   {(userData.childrenDetails || userData.children)?.length > 1 && (
-                    <Select value={selectedChild?.id || ""} onValueChange={(value: string) => {
+                    <Select value={selectedChild ? String(selectedChild.id) : ""} onValueChange={(value: string) => {
                       const children = userData.childrenDetails || userData.children || [];
-                      const child = children.find((c: any) => c.id === value);
+                      const child = children.find((c: any) => String(c.id) === value);
                       setSelectedChild(child || null);
                     }}>
                       <SelectTrigger className="w-full sm:w-48 h-8">
@@ -228,8 +228,8 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                       </SelectTrigger>
                       <SelectContent>
                         {(userData.childrenDetails || userData.children || []).map((child: any) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name} ({child.class})
+                          <SelectItem key={child.id} value={String(child.id)}>
+                            {child.name} ({child.class || (child.class_id ? `Class ${child.class_id}` : '—')})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -284,7 +284,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                 <GraduationCap className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-muted-foreground">Current Class</p>
-                  <p className="font-medium">{selectedChild?.class ?? (selectedChild?.class_id ? `Class ID ${selectedChild.class_id}` : '—')}</p>
+                  <p className="font-medium">{selectedChild?.class || (selectedChild?.class_id ? `Class ${selectedChild.class_id}` : '—')}</p>
                 </div>
               </div>
             </CardContent>
@@ -555,8 +555,8 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   </div>
                   <div className="space-y-2">
                     <Label>Regarding Child</Label>
-                    <Select value={selectedChild?.id || ''} onValueChange={(value: string) => {
-                      const child = (userData.children || []).find((c: any) => c.id === value);
+                    <Select value={selectedChild ? String(selectedChild.id) : ''} onValueChange={(value: string) => {
+                      const child = (userData.children || []).find((c: any) => String(c.id) === value);
                       setSelectedChild(child || null);
                     }}>
                       <SelectTrigger>
@@ -564,8 +564,8 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                       </SelectTrigger>
                       <SelectContent>
                         {(userData.childrenDetails || userData.children || []).map((child: any) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name} ({child.class})
+                          <SelectItem key={child.id} value={String(child.id)}>
+                            {child.name} ({child.class || (child.class_id ? `Class ${child.class_id}` : '—')})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -694,11 +694,11 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <p className="text-muted-foreground">Class</p>
-                          <p className="font-medium">{child.class}</p>
+                          <p className="font-medium">{child.class || (child.class_id ? `Class ${child.class_id}` : '—')}</p>
                         </div>
                         <div className="flex justify-between">
                           <p className="text-muted-foreground">Roll Number</p>
-                          <p className="font-medium">{child.rollNo}</p>
+                          <p className="font-medium">{child.rollNo || child.roll_no || '—'}</p>
                         </div>
                         <div className="flex justify-between">
                           <p className="text-muted-foreground">Academic Session</p>

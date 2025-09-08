@@ -35,7 +35,11 @@ export interface Student {
   id: number;
   name: string;
   class_id?: number;
+  // Optional human-readable class label (frontend convenience)
+  class?: string;
   roll_no?: string;
+  // Optional camelCase variant referenced in legacy code
+  rollNo?: string;
   parent_id?: number;
   email?: string;
   status?: string;
