@@ -69,7 +69,26 @@ export interface Message {
   created_at: string;
 }
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? 'http://localhost:8000';
+// Determine API base URL with smart defaults.
+// Priority: window.__API_BASE__ (runtime) ?? VITE env var ?? defaultBase
+// defaultBase = '' (same-origin) in non-localhost browsers, else 'http://localhost:8000' for dev.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isBrowser = typeof window !== 'undefined';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const runtimeBase = (isBrowser && (window as any).__API_BASE__) as string | undefined;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const envBase = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined;
+const isLocalhost = isBrowser && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+const defaultBase = isBrowser && !isLocalhost ? '' : 'http://localhost:8000';
+// Use nullish coalescing to allow '' (same-origin)
+const API_BASE = ((runtimeBase ?? envBase ?? defaultBase) as string).replace(/\/$/, '');
+// One-time diagnostic log (ignored by most users, helpful during deployment troubleshooting)
+if (isBrowser && !(window as any).__API_BASE_LOGGED) {
+  // eslint-disable-next-line no-console
+  console.info('[api] Using API base:', API_BASE || '(same-origin)');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__API_BASE_LOGGED = true;
+}
 
 function getAuthToken(): string | null {
   return localStorage.getItem('authToken');

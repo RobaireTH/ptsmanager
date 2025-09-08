@@ -7,8 +7,15 @@
       <title>Faith-Life</title>
     </head>
 
-    <body>
+    <body data-api-base="">
       <div id="root"></div>
+      <script>
+        // If data-api-base attribute is set (non-empty), expose as window.__API_BASE__ before app loads.
+        (function(){
+          var attr = document.body.getAttribute('data-api-base');
+          if(attr && attr.trim()) { window.__API_BASE__ = attr.trim().replace(/\/$/, ''); }
+        })();
+      </script>
       <script type="module" src="/src/main.tsx"></script>
     </body>
   </html>
