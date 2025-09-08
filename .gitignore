@@ -1,5 +1,10 @@
 node_modules
 dist
 build
-\n+# Ignore all markdown documentation files
+
+# Ignore all markdown documentation files
 *.md
+
+# Environment files (ignore all except example template)
+.env*
+!.env.example
