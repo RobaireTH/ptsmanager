@@ -34,7 +34,7 @@ app.include_router(parents.router, prefix="/api")
 app.include_router(classes.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
-from app.api import users, teachers, students, parents, classes, events, messages, auth, results, websockets, users_prisma, messages_prisma
+from app.api import users, teachers, students, parents, classes, events, messages, auth, results, websockets, users_prisma, messages_prisma, parents_prisma, teachers_prisma, students_prisma, results_prisma
 
 # ... (rest of the file)
 
@@ -42,6 +42,10 @@ app.include_router(results.router, prefix="/api")
 app.include_router(websockets.router, prefix="/api")
 app.include_router(users_prisma.router, prefix="/api")
 app.include_router(messages_prisma.router, prefix="/api")
+app.include_router(parents_prisma.router, prefix="/api")
+app.include_router(teachers_prisma.router, prefix="/api")
+app.include_router(students_prisma.router, prefix="/api")
+app.include_router(results_prisma.router, prefix="/api")
 
 @app.get("/health")
 async def health():
