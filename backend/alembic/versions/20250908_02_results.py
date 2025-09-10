@@ -6,7 +6,8 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20250908_02_results'
-down_revision = None
+# Chain results after refresh token fields migration to avoid parallel head
+down_revision = '20250908_02_add_refresh_token_fields'
 branch_labels = None
 depends_on = None
 
