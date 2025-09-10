@@ -1,10 +1,9 @@
 fastapi
 uvicorn
-sqlalchemy
+prisma
 pydantic[email]
 python-multipart
 passlib[bcrypt]
 PyJWT
-alembic
 httpx
 pytest

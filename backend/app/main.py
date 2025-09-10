@@ -4,13 +4,13 @@ from contextlib import asynccontextmanager
 import os
 
 from app.api import users, teachers, students, parents, classes, events, messages, auth, results
-from app.db.session import Base, engine  # retained for potential metadata access
-from app.models import models  # ensure models imported for Alembic autogenerate if needed
+from app.db.prisma_client import init_prisma, close_prisma
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Migrations should be applied externally (Alembic). No create_all here.
+    await init_prisma()
     yield
+    await close_prisma()
 
 app = FastAPI(title="PTS Manager API", version="0.1.0", lifespan=lifespan)
 
@@ -34,7 +34,13 @@ app.include_router(parents.router, prefix="/api")
 app.include_router(classes.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
+from app.api import users, teachers, students, parents, classes, events, messages, auth, results, websockets, users_prisma
+
+# ... (rest of the file)
+
 app.include_router(results.router, prefix="/api")
+app.include_router(websockets.router, prefix="/api")
+app.include_router(users_prisma.router, prefix="/api")
 
 @app.get("/health")
 async def health():

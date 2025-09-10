@@ -1,0 +1,116 @@
+// Prisma schema (Python Prisma) for SQLite
+// Datasource
+ datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+ }
+
+ generator client {
+  provider = "prisma-client-py"
+ }
+
+// Models translated from previous SQLAlchemy definitions
+model User {
+  id                      Int      @id @default(autoincrement())
+  name                    String
+  email                   String   @unique
+  role                    String
+  password_hash           String
+  status                  String   @default("active")
+  email_verified          Boolean  @default(false)
+  email_verification_token String? 
+  password_reset_token     String?
+  password_reset_expires_at String?
+  refresh_token_hash        String?
+  refresh_token_expires_at  String?
+  parent                   Parent?
+  teacher                  Teacher?
+  sentMessages             Message[] @relation("SentMessages")
+  receivedMessages         Message[] @relation("ReceivedMessages")
+  results                  Result[]  @relation("TeacherResults")
+}
+
+model Parent {
+  id          Int       @id @default(autoincrement())
+  user_id     Int       @unique
+  phone       String?
+  profile_picture_url String?
+  user        User      @relation(fields: [user_id], references: [id])
+  students    Student[]
+}
+
+model Teacher {
+  id        Int      @id @default(autoincrement())
+  user_id   Int      @unique
+  phone     String?
+  subjects  String?  // comma separated
+  status    String   @default("active")
+  user      User     @relation(fields: [user_id], references: [id])
+  classes   Class[]
+  results   Result[] @relation("TeacherResults")
+}
+
+model Class {
+  id               Int       @id @default(autoincrement())
+  name             String    @unique
+  teacher_id       Int?
+  room             String?
+  subjects         String?
+  expected_students Int      @default(0)
+  teacher          Teacher?  @relation(fields: [teacher_id], references: [id])
+  students         Student[]
+  results          Result[]
+}
+
+model Student {
+  id        Int      @id @default(autoincrement())
+  name      String
+  class_id  Int?
+  roll_no   String?  @unique
+  parent_id Int?
+  email     String?  @unique
+  status    String   @default("active")
+  parent    Parent?  @relation(fields: [parent_id], references: [id])
+  class     Class?   @relation(fields: [class_id], references: [id])
+  results   Result[]
+}
+
+model Event {
+  id        Int     @id @default(autoincrement())
+  title     String
+  description String?
+  date      String?
+  time      String?
+  type      String?
+  status    String  @default("scheduled")
+}
+
+model Message {
+  id           Int     @id @default(autoincrement())
+  subject      String
+  body         String?
+  sender_id    Int?
+  recipient_id Int?
+  recipient_role String?
+  created_at   String?
+  read_at      String?
+  sender       User?   @relation("SentMessages", fields: [sender_id], references: [id])
+  recipient    User?   @relation("ReceivedMessages", fields: [recipient_id], references: [id])
+}
+
+model Result {
+  id         Int     @id @default(autoincrement())
+  student_id Int
+  class_id   Int?
+  teacher_id Int
+  subject    String
+  term       String
+  score      Int
+  grade      String
+  date       String?
+  comments   String?
+  created_at String?
+  student    Student @relation(fields: [student_id], references: [id])
+  class      Class?  @relation(fields: [class_id], references: [id])
+  teacher    Teacher @relation("TeacherResults", fields: [teacher_id], references: [id])
+}
