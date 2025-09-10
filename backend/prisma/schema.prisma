@@ -27,7 +27,6 @@ model User {
   teacher                  Teacher?
   sentMessages             Message[] @relation("SentMessages")
   receivedMessages         Message[] @relation("ReceivedMessages")
-  results                  Result[]  @relation("TeacherResults")
 }
 
 model Parent {
@@ -46,20 +45,21 @@ model Teacher {
   subjects  String?  // comma separated
   status    String   @default("active")
   user      User     @relation(fields: [user_id], references: [id])
-  classes   Class[]
+  classes   ClassModel[]
   results   Result[] @relation("TeacherResults")
 }
 
-model Class {
-  id               Int       @id @default(autoincrement())
-  name             String    @unique
-  teacher_id       Int?
-  room             String?
-  subjects         String?
-  expected_students Int      @default(0)
-  teacher          Teacher?  @relation(fields: [teacher_id], references: [id])
-  students         Student[]
-  results          Result[]
+model ClassModel {
+  id                Int        @id @default(autoincrement())
+  name              String     @unique
+  teacher_id        Int?
+  room              String?
+  subjects          String?
+  expected_students Int        @default(0)
+  teacher           Teacher?   @relation(fields: [teacher_id], references: [id])
+  students          Student[]
+  results           Result[]
+  @@map("classes")
 }
 
 model Student {
@@ -71,7 +71,7 @@ model Student {
   email     String?  @unique
   status    String   @default("active")
   parent    Parent?  @relation(fields: [parent_id], references: [id])
-  class     Class?   @relation(fields: [class_id], references: [id])
+  class_    ClassModel? @relation(fields: [class_id], references: [id])
   results   Result[]
 }
 
@@ -111,6 +111,6 @@ model Result {
   comments   String?
   created_at String?
   student    Student @relation(fields: [student_id], references: [id])
-  class      Class?  @relation(fields: [class_id], references: [id])
+  class_     ClassModel?  @relation(fields: [class_id], references: [id])
   teacher    Teacher @relation("TeacherResults", fields: [teacher_id], references: [id])
 }
