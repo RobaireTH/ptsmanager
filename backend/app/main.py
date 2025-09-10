@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 import os
 
 from app.api import auth, websockets
-from app.api import classes, events  # still legacy until converted
+from app.api import classes_prisma as classes
+from app.api import events_prisma as events
 from app.api import users_prisma as users
 from app.api import messages_prisma as messages
 from app.api import parents_prisma as parents
@@ -21,7 +22,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="PTS Manager API", version="0.1.0", lifespan=lifespan)
 
-# CORS (adjust origins in production)
+# CORS: allow all (development convenience). Set CORS_ALLOW_ORIGINS to restrict in prod.
 origins_env = os.getenv("CORS_ALLOW_ORIGINS", "*")
 allow_origins = ["*"] if origins_env.strip() == "*" else [o.strip() for o in origins_env.split(",") if o.strip()]
 app.add_middleware(
