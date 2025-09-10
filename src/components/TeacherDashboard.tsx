@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
@@ -12,12 +12,16 @@ import {
   getStudents,
   getClasses,
   getMessages,
+  createMessage,
   createResult,
   getResults,
+  getParents,
   Student,
   Message,
-  Result
+  Result,
+  Parent
 } from '../lib/api';
+import useWebSocket from 'react-use-websocket';
 
 interface TeacherDashboardProps {
   userData: any;
@@ -32,6 +36,9 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
   const [students, setStudents] = useState<Student[]>([]);
   // const [classes, setClasses] = useState<Class[]>([]); // reserved for future filtering
   const [messages, setMessages] = useState<Message[]>([]);
+  const [parents, setParents] = useState<Parent[]>([]);
+  const [selectedParentId, setSelectedParentId] = useState<number | ''>('');
+  const [sending, setSending] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
   const [isAddingResultFor, setIsAddingResultFor] = useState<Student | null>(null);
   const [newResult, setNewResult] = useState<{ subject: string; term: string; score: string; grade: string; date: string; comments: string }>({ subject: '', term: '1st-term', score: '', grade: '', date: '', comments: '' });
@@ -45,15 +52,17 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
     setLoading(true);
     setError(null);
     try {
-      const [studentsData, _classesData, messagesData, resultsData] = await Promise.all([
+      const [studentsData, _classesData, messagesData, resultsData, parentsData] = await Promise.all([
         getStudents(),
         getClasses(),
         getMessages(),
-        getResults()
+        getResults(),
+        getParents()
       ]);
       setStudents(studentsData);
       setMessages(messagesData);
       setResults(resultsData);
+      setParents(parentsData);
       
   // Could compute teacher-specific classes here later
     } catch (err: any) {
@@ -65,6 +74,67 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
   };
 
   const unreadCount = 0; // backend Message lacks status field currently
+
+  // Map student -> parent ids (assuming student.parent_id links to Parent.id)
+  const studentParentMap = useMemo(() => {
+    const map: Record<number, Parent | undefined> = {};
+    parents.forEach(p => { map[p.id] = p; });
+    return map;
+  }, [parents]);
+
+  // WebSocket connection (auth-less demo). Use userData.id for personal channel.
+  const wsUrl = useMemo(() => {
+    // Derive base from API_BASE logic: reuse same origin (empty) or window.location
+    const loc = typeof window !== 'undefined' ? window.location : null;
+    const proto = loc?.protocol === 'https:' ? 'wss' : 'ws';
+    const host = loc?.host || '';
+    return host ? `${proto}://${host}/api/ws/${userData.id}` : '';
+  }, [userData.id]);
+
+  const { sendJsonMessage, lastMessage } = useWebSocket(wsUrl || null, {
+    retryOnError: true,
+    shouldReconnect: () => true,
+  });
+
+  // Append incoming WebSocket JSON-formatted messages
+  useEffect(() => {
+    if (!lastMessage) return;
+    try {
+      const data = JSON.parse(lastMessage.data);
+      // Expect shape matching backend message broadcast
+      if (data && data.id && data.subject) {
+        setMessages(prev => {
+          if (prev.find(m => m.id === data.id)) return prev; // dedupe
+          return [data as Message, ...prev];
+        });
+      }
+    } catch {
+      // ignore non-JSON frames
+    }
+  }, [lastMessage]);
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    if (!selectedParentId) return;
+    setSending(true);
+    try {
+      const subject = newMessage.split('\n')[0].slice(0, 80) || 'Message';
+      const created = await createMessage({
+        subject,
+        body: newMessage,
+        recipient_id: Number(selectedParentId),
+        recipient_role: 'parent'
+      });
+      setMessages(prev => [created, ...prev]);
+      setNewMessage('');
+      // Optional: push a small ack frame (not required as server pushes to parent)
+      sendJsonMessage({ type: 'sent', id: created.id });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSending(false);
+    }
+  };
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -267,12 +337,21 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
               <Card>
                 <CardHeader>
                   <CardTitle>Send Message</CardTitle>
+                  <CardDescription>Select a parent and compose your message</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Recipient selection placeholder */}
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Subject</p>
-                    <Input placeholder="Message subject" />
+                    <p className="text-sm font-medium">Parent</p>
+                    <select
+                      className="w-full border rounded h-9 px-2"
+                      value={selectedParentId}
+                      onChange={(e) => setSelectedParentId(e.target.value ? Number(e.target.value) : '')}
+                    >
+                      <option value="">Select parent</option>
+                      {parents.map(p => (
+                        <option key={p.id} value={p.id}>Parent #{p.id}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Message</p>
@@ -283,9 +362,9 @@ export function TeacherDashboard({ userData, onLogout }: TeacherDashboardProps) 
                       rows={4}
                     />
                   </div>
-                  <Button className="w-full flex items-center gap-2">
+                  <Button disabled={sending || !newMessage.trim() || !selectedParentId} onClick={handleSendMessage} className="w-full flex items-center gap-2">
                     <Send className="h-4 w-4" />
-                    Send Message
+                    {sending ? 'Sending...' : 'Send Message'}
                   </Button>
                 </CardContent>
               </Card>
