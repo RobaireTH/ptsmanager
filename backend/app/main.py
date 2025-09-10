@@ -3,7 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
 
-from app.api import users, teachers, students, parents, classes, events, messages, auth, results
+from app.api import auth, websockets
+from app.api import classes, events  # still legacy until converted
+from app.api import users_prisma as users
+from app.api import messages_prisma as messages
+from app.api import parents_prisma as parents
+from app.api import teachers_prisma as teachers
+from app.api import students_prisma as students
+from app.api import results_prisma as results
 from app.db.prisma_client import init_prisma, close_prisma
 
 @asynccontextmanager
@@ -34,18 +41,8 @@ app.include_router(parents.router, prefix="/api")
 app.include_router(classes.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
-from app.api import users, teachers, students, parents, classes, events, messages, auth, results, websockets, users_prisma, messages_prisma, parents_prisma, teachers_prisma, students_prisma, results_prisma
-
-# ... (rest of the file)
-
 app.include_router(results.router, prefix="/api")
 app.include_router(websockets.router, prefix="/api")
-app.include_router(users_prisma.router, prefix="/api")
-app.include_router(messages_prisma.router, prefix="/api")
-app.include_router(parents_prisma.router, prefix="/api")
-app.include_router(teachers_prisma.router, prefix="/api")
-app.include_router(students_prisma.router, prefix="/api")
-app.include_router(results_prisma.router, prefix="/api")
 
 @app.get("/health")
 async def health():

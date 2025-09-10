@@ -82,8 +82,10 @@ class Message(Base):
     subject = Column(String, nullable=False)
     body = Column(Text)
     sender_id = Column(Integer, ForeignKey("users.id"))
+    recipient_id = Column(Integer, ForeignKey("users.id"))
     recipient_role = Column(String)  # e.g., parent, teacher, admin
     created_at = Column(String)  # ISO timestamp for simplicity
+    read_at = Column(String, nullable=True)  # ISO timestamp for simplicity
 
 class Result(Base):
     __tablename__ = "results"

@@ -69,8 +69,10 @@ export interface Message {
   subject: string;
   body?: string;
   sender_id: number;
+  recipient_id?: number;
   recipient_role?: string;
   created_at: string;
+  read_at?: string;
 }
 
 export interface Result {
@@ -372,7 +374,7 @@ export async function getMessages(): Promise<Message[]> {
   return request<Message[]>('/api/messages/');
 }
 
-export async function createMessage(data: { subject: string; body?: string; recipient_role?: string }): Promise<Message> {
+export async function createMessage(data: { subject: string; body?: string; recipient_id?: number; recipient_role?: string }): Promise<Message> {
   return request<Message>('/api/messages/', {
     method: 'POST',
     body: JSON.stringify(data),

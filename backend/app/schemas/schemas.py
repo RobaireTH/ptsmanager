@@ -143,15 +143,17 @@ class Event(EventBase):
 class MessageBase(BaseModel):
     subject: str
     body: Optional[str] = None
+    recipient_id: Optional[int] = None
     recipient_role: Optional[str] = None
 
 class MessageCreate(MessageBase):
     sender_id: int
 
-class Message(BaseModel):
+class Message(MessageBase):
     id: int
     sender_id: int
     created_at: str
+    read_at: Optional[str] = None
     class Config:
         from_attributes = True
 
