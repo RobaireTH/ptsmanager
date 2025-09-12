@@ -100,3 +100,20 @@ class Result(Base):
     date = Column(String, nullable=True)  # ISO date string
     comments = Column(Text, nullable=True)
     created_at = Column(String, nullable=True)  # ISO timestamp
+
+class Attendance(Base):
+    __tablename__ = "attendance"
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
+    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    date = Column(String, nullable=False)  # ISO date string (YYYY-MM-DD)
+    status = Column(String, nullable=False)  # "present", "absent", "late", "excused"
+    notes = Column(Text, nullable=True)  # Optional notes about absence/lateness
+    created_at = Column(String, nullable=True)  # ISO timestamp
+    updated_at = Column(String, nullable=True)  # ISO timestamp
+
+    # Relationships
+    student = relationship("Student", foreign_keys=[student_id])
+    class_ = relationship("Class", foreign_keys=[class_id])
+    teacher = relationship("Teacher", foreign_keys=[teacher_id])

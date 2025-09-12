@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
 
-from app.api import auth, websockets
+from app.api import auth, websockets, attendance
 from app.api import classes_prisma as classes
 from app.api import events_prisma as events
 from app.api import users_prisma as users
@@ -43,6 +43,7 @@ app.include_router(classes.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
 app.include_router(results.router, prefix="/api")
+app.include_router(attendance.router, prefix="/api")
 app.include_router(websockets.router, prefix="/api")
 
 @app.get("/health")

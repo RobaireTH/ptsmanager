@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional
 from datetime import datetime
 from prisma import models
-from prisma.enums import Role
+
 from app.db.prisma_client import prisma
 from app.api.auth import get_current_user
 from pydantic import BaseModel

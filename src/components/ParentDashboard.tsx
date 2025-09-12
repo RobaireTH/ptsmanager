@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -13,17 +13,21 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { PhoneInput } from './ui/phone-input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { GraduationCap, MessageSquare, Download, Send, TrendingUp, Calendar, Bell, Camera } from 'lucide-react';
-import { 
+import {
   getParents,
   updateParent,
   getStudents,
   getEvents,
   getMessages,
   getResults,
+  getAttendance,
+  getAttendanceSummary,
   Student,
   Event,
   Message,
-  Result
+  Result,
+  AttendanceWithDetails,
+  AttendanceSummary
 } from '../lib/api';
 
 interface ParentDashboardProps {
@@ -49,6 +53,8 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceWithDetails[]>([]);
+  const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null);
 
   const convertFileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -79,6 +85,27 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
     fetchResults();
   }, [selectedChild]);
 
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        if (selectedChild) {
+          const [attendanceData, summaryData] = await Promise.all([
+            getAttendance({ student_id: Number(selectedChild.id) }),
+            getAttendanceSummary({ student_id: Number(selectedChild.id) })
+          ]);
+          setAttendanceRecords(attendanceData);
+          setAttendanceSummary(summaryData);
+        } else {
+          setAttendanceRecords([]);
+          setAttendanceSummary(null);
+        }
+      } catch (e) {
+        console.error('Error fetching attendance:', e);
+      }
+    };
+    fetchAttendance();
+  }, [selectedChild]);
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -88,11 +115,11 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
         getEvents(),
         getMessages()
       ]);
-      
+
       setStudents(studentsData);
       setEvents(eventsData);
       setMessages(messagesData);
-      
+
       // Students endpoint is scoped by backend for parent; use as-is
       const parentStudents = studentsData;
       if (parentStudents.length > 0) {
@@ -143,7 +170,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
       // Find the parent record for this user
       const parentRecord = await getParents();
       const parent = parentRecord.find(p => p.user_id === userData.id);
-      
+
       if (parent) {
         await updateParent(parent.id, updates);
         setParentData(prev => ({ ...prev, ...updates }));
@@ -167,12 +194,34 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
     id: number; subject: string; term: string; score: number; grade: string; teacher?: string; date?: string
   }[]>([]);
 
-  const attendanceData = [
-    { month: 'January', present: 18, absent: 2, total: 20, percentage: 90 },
-    { month: 'December', present: 19, absent: 1, total: 20, percentage: 95 },
-    { month: 'November', present: 17, absent: 3, total: 20, percentage: 85 },
-    { month: 'October', present: 20, absent: 0, total: 20, percentage: 100 },
-  ];
+  // Group attendance records by month for display
+  const groupedAttendance = useMemo(() => {
+    if (!attendanceRecords.length) return [];
+
+    const monthlyData: { [key: string]: { present: number; absent: number; late: number; total: number } } = {};
+
+    attendanceRecords.forEach(record => {
+      const date = new Date(record.date);
+      const monthKey = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { present: 0, absent: 0, late: 0, total: 0 };
+      }
+
+      monthlyData[monthKey].total++;
+      if (record.status === 'present') monthlyData[monthKey].present++;
+      if (record.status === 'absent') monthlyData[monthKey].absent++;
+      if (record.status === 'late') monthlyData[monthKey].late++;
+    });
+
+    return Object.entries(monthlyData).map(([month, data]) => ({
+      month,
+      present: data.present + data.late, // Count late as attended
+      absent: data.absent,
+      total: data.total,
+      percentage: Math.round(((data.present + data.late) / data.total) * 100)
+    })).slice(0, 4);
+  }, [attendanceRecords]);
 
   const upcomingEvents = [
     { date: '2024-01-18', event: 'Parent-Teacher Meeting', time: '2:00 PM' },
@@ -266,7 +315,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                 </div>
               </PopoverContent>
             </Popover>
-            
+
             <Button variant="outline" onClick={onLogout} className="whitespace-nowrap">
               Logout
             </Button>
@@ -304,10 +353,11 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-muted-foreground">Attendance</p>
-                  <p className="font-medium">92.5%</p>
-                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-muted-foreground">Attendance</p>
+                    <p className="font-medium">{attendanceSummary ? `${attendanceSummary.percentage}%` : 'N/A'}</p>
+                  </div>
               </div>
             </CardContent>
           </Card>
@@ -375,19 +425,25 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {attendanceData.slice(0, 3).map((record, index) => (
-                      <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{record.month}</p>
-                          <p className="text-muted-foreground">{record.present}/{record.total} days</p>
+                    {groupedAttendance.length > 0 ? (
+                      groupedAttendance.slice(0, 3).map((record, index) => (
+                        <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{record.month}</p>
+                            <p className="text-muted-foreground">{record.present}/{record.total} days</p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-medium ${record.percentage >= 90 ? 'text-green-600' : record.percentage >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {record.percentage}%
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className={`font-medium ${record.percentage >= 90 ? 'text-green-600' : record.percentage >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {record.percentage}%
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">
+                        No attendance data available
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -533,7 +589,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   </CardContent>
                 </Card>
               </div>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Send Message</CardTitle>
@@ -618,9 +674,9 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                         onChange={handleProfilePictureChange}
                         className="hidden"
                       />
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="flex items-center gap-2"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUpdatingProfile}
@@ -635,15 +691,15 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Full Name</Label>
-                      <Input 
-                        defaultValue={parentData.name} 
+                      <Input
+                        defaultValue={parentData.name}
                         onChange={(e) => setParentData({...parentData, name: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Email Address</Label>
-                      <Input 
-                        defaultValue={parentData.email} 
+                      <Input
+                        defaultValue={parentData.email}
                         onChange={(e) => setParentData({...parentData, email: e.target.value})}
                       />
                     </div>
@@ -690,7 +746,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                           <p className="text-muted-foreground">Student ID: {child.id}</p>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <p className="text-muted-foreground">Class</p>
