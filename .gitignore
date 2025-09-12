@@ -8,3 +8,4 @@ build
 # Environment files (ignore all except example template)
 .env*
 !.env.example
+.aider*
