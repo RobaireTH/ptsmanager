@@ -5,7 +5,7 @@ import { Users, Award, Globe, ArrowRight, Star, Check, GraduationCap, Heart, Lig
 import studentsImage from './assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 import principalImage from './assets/fe6e122429d57d168f64cd786cf3c0b44ef59f7d.png';
 import studentWritingImage from './assets/966bf5b2d0b1a0e63e316fbc22addb3f9debde63.png';
-import schoolLogo from './assets/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
+import schoolLogo from './assets/logo.jpg';
 import { SchoolGallery } from './SchoolGallery';
 
 import { useState } from 'react';
