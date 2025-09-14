@@ -62,6 +62,25 @@ _cors_config = {
     "allow_headers": allow_headers,
 }
 
+# Optional CORS debug logging (prints per-request details when DEBUG_CORS=1)
+if os.getenv("DEBUG_CORS", "0") in ("1", "true", "yes"):
+    @app.middleware("http")
+    async def _cors_debug_logger(request, call_next):
+        origin = request.headers.get("origin")
+        method = request.method
+        path = request.url.path
+        # Preflight detection
+        if method == "OPTIONS":
+            print(f"[CORS DEBUG] Preflight OPTIONS from {origin} to {path}")
+        else:
+            print(f"[CORS DEBUG] {method} {path} Origin={origin}")
+        response = await call_next(request)
+        if origin:
+            acao = response.headers.get("access-control-allow-origin")
+            acac = response.headers.get("access-control-allow-credentials")
+            print(f"[CORS DEBUG] Response CORS headers: A-C-A-Origin={acao} A-C-A-Credentials={acac}")
+        return response
+
 # Routers
 app.include_router(auth.router, prefix="/api")
 # (Compatibility) also expose auth without /api prefix in case frontend hits /auth/* directly
