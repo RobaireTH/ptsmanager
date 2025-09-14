@@ -3,10 +3,19 @@ from typing import List, Optional
 from datetime import datetime, date
 import time
 from prisma import Prisma
-from prisma.models import Attendance, Student, Teacher
 
 from app.api.auth import get_current_user, require_role
-from app.db.session import get_prisma
+from app.db.prisma_client import prisma as _prisma, init_prisma as _init_prisma
+
+async def get_prisma() -> Prisma:
+    """FastAPI dependency returning a connected global Prisma client.
+
+    Ensures the shared client is connected (lazy) instead of creating a new
+    instance per request (avoids connection churn and mismatched delegates).
+    """
+    if not _prisma.is_connected():
+        await _init_prisma()
+    return _prisma
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 

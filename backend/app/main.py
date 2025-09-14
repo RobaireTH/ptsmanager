@@ -35,6 +35,8 @@ app.add_middleware(
 
 # Routers
 app.include_router(auth.router, prefix="/api")
+# (Compatibility) also expose auth without /api prefix in case frontend hits /auth/* directly
+app.include_router(auth.router)
 app.include_router(users.router, prefix="/api")
 app.include_router(teachers.router, prefix="/api")
 app.include_router(students.router, prefix="/api")
@@ -45,6 +47,14 @@ app.include_router(messages.router, prefix="/api")
 app.include_router(results.router, prefix="/api")
 app.include_router(attendance.router, prefix="/api")
 app.include_router(websockets.router, prefix="/api")
+
+@app.get("/api/_debug/routes")
+async def list_routes():
+    """Return list of registered routes (method -> path) for debugging 404 issues."""
+    return sorted([
+        {"path": r.path, "methods": sorted(list(r.methods))}
+        for r in app.routes
+    ], key=lambda x: x["path"])
 
 @app.get("/health")
 async def health():
