@@ -7,8 +7,9 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { PhoneInput } from './ui/phone-input';
 import { UserCheck, Users, Eye, EyeOff } from 'lucide-react';
-import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
-import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
+// Replaced missing Figma asset with existing logo asset
+import schoolLogo from '../assets/logo.jpg';
+import studentsImage from '../assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 import { createUser, login as apiLogin, getMe } from '../lib/api';
 
 interface SignupPageProps {

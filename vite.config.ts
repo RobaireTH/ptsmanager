@@ -17,10 +17,8 @@
         'next-themes@0.4.6': 'next-themes',
         'lucide-react@0.487.0': 'lucide-react',
         'input-otp@1.4.2': 'input-otp',
-        'figma:asset/fe6e122429d57d168f64cd786cf3c0b44ef59f7d.png': path.resolve(__dirname, './src/assets/fe6e122429d57d168f64cd786cf3c0b44ef59f7d.png'),
-        'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png': path.resolve(__dirname, './src/assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png'),
-        'figma:asset/966bf5b2d0b1a0e63e316fbc22addb3f9debde63.png': path.resolve(__dirname, './src/assets/966bf5b2d0b1a0e63e316fbc22addb3f9debde63.png'),
-        'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png': path.resolve(__dirname, './src/assets/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png'),
+  // Removed figma:asset aliases; components now import from ../assets directly
+  // Removed alias for missing figma asset 6c5b55... now replaced by local logo.jpg
         'embla-carousel-react@8.6.0': 'embla-carousel-react',
         'cmdk@1.1.1': 'cmdk',
         'class-variance-authority@0.7.1': 'class-variance-authority',

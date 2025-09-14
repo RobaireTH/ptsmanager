@@ -5,8 +5,9 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
-import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
+// Replaced missing Figma-exported image with local logo
+import schoolLogo from '../assets/logo.jpg';
+import studentsImage from '../assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 // @ts-ignore - TypeScript module resolution for JS file
 import { getParentById, initializeLocalStorage } from '../utils/localStorage';
 import { login as apiLogin, getMe } from '../lib/api';

@@ -14,7 +14,7 @@ import schoolSiteImg2 from "../assets/schoolsiteimg2.png";
 import redBuildings from "../assets/red-buildings-households.jpg";
 import waterDwelling from "../assets/water-dwelling.jpg";
 // Fallback image from figma assets
-import fallbackImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
+import fallbackImage from '../assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 
 // Gallery images data using your provided images
 const galleryImages = [

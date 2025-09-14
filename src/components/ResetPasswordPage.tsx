@@ -4,8 +4,9 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Eye, EyeOff, CheckCircle } from 'lucide-react';
-import schoolLogo from 'figma:asset/6c5b559c47b3a60a366fb3371a7065b4c91fe552.png';
-import studentsImage from 'figma:asset/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
+// Use local logo asset instead of missing figma asset
+import schoolLogo from '../assets/logo.jpg';
+import studentsImage from '../assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
 import { resetPassword } from '../lib/api';
 
 interface ResetPasswordPageProps {
