@@ -22,16 +22,45 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="PTS Manager API", version="0.1.0", lifespan=lifespan)
 
-# CORS: allow all (development convenience). Set CORS_ALLOW_ORIGINS to restrict in prod.
-origins_env = os.getenv("CORS_ALLOW_ORIGINS", "*")
-allow_origins = ["*"] if origins_env.strip() == "*" else [o.strip() for o in origins_env.split(",") if o.strip()]
+"""CORS configuration
+
+Rules:
+1. If CORS_ALLOW_ORIGINS env var is absent or '*', allow all origins WITHOUT credentials (fast, permissive dev mode).
+2. If specific origins provided (comma separated), use them and enable credentials.
+3. Expose the effective configuration via /api/_debug/cors for runtime inspection.
+"""
+origins_env = os.getenv("CORS_ALLOW_ORIGINS", "*").strip()
+raw_origins = [o.strip() for o in origins_env.split(",") if o.strip()] if origins_env != "*" else ["*"]
+
+# If wildcard we cannot legally send Access-Control-Allow-Credentials: true; so only enable credentials when explicit list.
+explicit_origins = origins_env != "*"
+allow_credentials = explicit_origins
+allow_origins = raw_origins if explicit_origins else ["*"]
+
+# Allow common headers; wildcard sometimes blocked with certain proxies when combined with credentials.
+allow_headers = [
+    "Authorization",
+    "Content-Type",
+    "Accept",
+    "Origin",
+    "X-Requested-With",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=allow_headers,
 )
+
+# Store for debug endpoint
+_cors_config = {
+    "allow_origins": allow_origins,
+    "allow_credentials": allow_credentials,
+    "allow_methods": ["*"],
+    "allow_headers": allow_headers,
+}
 
 # Routers
 app.include_router(auth.router, prefix="/api")
@@ -56,6 +85,22 @@ async def list_routes():
         for r in app.routes
     ], key=lambda x: x["path"])
 
+@app.get("/api/_debug/cors")
+async def cors_config():
+    """Return effective CORS configuration."""
+    return _cors_config
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+@app.get("/")
+async def root():
+    """Root endpoint returning 200 so upstream probes don't get 404."""
+    return {
+        "service": "PTS Manager API",
+        "status": "ok",
+        "health": "/health",
+        "api_base": "/api",
+        "version": "0.1.0"
+    }
