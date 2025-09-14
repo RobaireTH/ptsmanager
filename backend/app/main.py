@@ -22,29 +22,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="PTS Manager API", version="0.1.0", lifespan=lifespan)
 
-"""CORS configuration
-
-Rules:
-1. If CORS_ALLOW_ORIGINS env var is absent or '*', allow all origins WITHOUT credentials (fast, permissive dev mode).
-2. If specific origins provided (comma separated), use them and enable credentials.
-3. Expose the effective configuration via /api/_debug/cors for runtime inspection.
+"""Simplified * wildcard CORS (no credentials) as requested.
+NOTE: With wildcard we cannot use cookies or Authorization-based credential reflection.
+If you later need credentials, revert to explicit origin list.
 """
-origins_env = os.getenv("CORS_ALLOW_ORIGINS", "*").strip()
-raw_origins = [o.strip() for o in origins_env.split(",") if o.strip()] if origins_env != "*" else ["*"]
-
-# If wildcard we cannot legally send Access-Control-Allow-Credentials: true; so only enable credentials when explicit list.
-explicit_origins = origins_env != "*"
-allow_credentials = explicit_origins
-allow_origins = raw_origins if explicit_origins else ["*"]
-
-# Allow common headers; wildcard sometimes blocked with certain proxies when combined with credentials.
-allow_headers = [
-    "Authorization",
-    "Content-Type",
-    "Accept",
-    "Origin",
-    "X-Requested-With",
-]
+allow_origins = ["*"]
+allow_credentials = False
+allow_headers = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,12 +39,7 @@ app.add_middleware(
 )
 
 # Store for debug endpoint
-_cors_config = {
-    "allow_origins": allow_origins,
-    "allow_credentials": allow_credentials,
-    "allow_methods": ["*"],
-    "allow_headers": allow_headers,
-}
+_cors_config = {"allow_origins": allow_origins, "allow_credentials": allow_credentials, "allow_methods": ["*"], "allow_headers": allow_headers}
 
 # Optional CORS debug logging (prints per-request details when DEBUG_CORS=1)
 if os.getenv("DEBUG_CORS", "0") in ("1", "true", "yes"):
