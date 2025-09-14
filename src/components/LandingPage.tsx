@@ -2,10 +2,12 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Users, Award, Globe, ArrowRight, Star, Check, GraduationCap, Heart, Lightbulb } from 'lucide-react';
-import studentsImage from './assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
-import principalImage from './assets/fe6e122429d57d168f64cd786cf3c0b44ef59f7d.png';
-import studentWritingImage from './assets/966bf5b2d0b1a0e63e316fbc22addb3f9debde63.png';
-import schoolLogo from './assets/logo.jpg';
+// cache-bust: forcing Vercel rebuild to pick correct ../assets paths (timestamp: rebuild trigger)
+// Images: correct path goes up one level to shared assets folder
+import studentsImage from '../assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
+import principalImage from '../assets/fe6e122429d57d168f64cd786cf3c0b44ef59f7d.png';
+import studentWritingImage from '../assets/966bf5b2d0b1a0e63e316fbc22addb3f9debde63.png';
+import schoolLogo from '../assets/logo.jpg';
 import { SchoolGallery } from './SchoolGallery';
 
 import { useState } from 'react';
