@@ -78,7 +78,10 @@ if os.getenv("DEBUG_CORS", "0") in ("1", "true", "yes"):
         if origin:
             acao = response.headers.get("access-control-allow-origin")
             acac = response.headers.get("access-control-allow-credentials")
-            print(f"[CORS DEBUG] Response CORS headers: A-C-A-Origin={acao} A-C-A-Credentials={acac}")
+            if not acao:
+                print(f"[CORS DEBUG] Origin {origin} NOT allowed (configured: {allow_origins})")
+            else:
+                print(f"[CORS DEBUG] Response CORS headers: A-C-A-Origin={acao} A-C-A-Credentials={acac}")
         return response
 
 # Routers
