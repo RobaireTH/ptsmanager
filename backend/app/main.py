@@ -13,6 +13,8 @@ from app.api import teachers_prisma as teachers
 from app.api import students_prisma as students
 from app.api import results_prisma as results
 from app.db.prisma_client import init_prisma, close_prisma
+from prisma import Prisma
+import pathlib, time
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -90,6 +92,34 @@ async def list_routes():
 async def cors_config():
     """Return effective CORS configuration."""
     return _cors_config
+
+@app.get("/api/_debug/db")
+async def db_debug():
+    # Derive path from DATABASE_URL env (sqlite only) else prisma default
+    db_url = os.getenv("DATABASE_URL", "file:./ptsmanager.db")
+    path_part = db_url.split("file:",1)[1] if db_url.startswith("file:") else db_url
+    p = pathlib.Path(path_part)
+    exists = p.exists()
+    size = p.stat().st_size if exists else 0
+    mtime = p.stat().st_mtime if exists else None
+    prisma_client = Prisma()
+    try:
+        if not prisma_client.is_connected():
+            await prisma_client.connect()
+        user_count = await prisma_client.user.count()
+    except Exception:
+        user_count = None
+    finally:
+        if prisma_client.is_connected():
+            await prisma_client.disconnect()
+    return {
+        "database_url": db_url,
+        "resolved_path": str(p.resolve()),
+        "exists": exists,
+        "size_bytes": size,
+        "modified": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mtime)) if mtime else None,
+        "user_count": user_count,
+    }
 
 @app.get("/health")
 async def health():
