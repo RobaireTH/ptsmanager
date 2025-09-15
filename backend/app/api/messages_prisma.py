@@ -7,7 +7,7 @@ from app.db.prisma_client import prisma
 from app.api.auth import get_current_user
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/messages2", tags=["messages-prisma"])  # temporary incremental path
+router = APIRouter(prefix="/messages", tags=["messages"])  # canonical path
 
 class MessageCreate(BaseModel):
     subject: str

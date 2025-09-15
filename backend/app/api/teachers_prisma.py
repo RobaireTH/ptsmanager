@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.api.auth import get_current_user, require_role
 from app.db.prisma_client import prisma
 
-router = APIRouter(prefix="/teachers2", tags=["teachers-prisma"])
+router = APIRouter(prefix="/teachers", tags=["teachers"])
 
 class TeacherCreate(BaseModel):
     user_id: int

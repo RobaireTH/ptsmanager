@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.api.auth import get_current_user, require_role
 from app.db.prisma_client import prisma
 
-router = APIRouter(prefix="/parents2", tags=["parents-prisma"])
+router = APIRouter(prefix="/parents", tags=["parents"])
 
 class ParentCreate(BaseModel):
     user_id: int
