@@ -4,7 +4,7 @@ from datetime import datetime
 from prisma import models
 
 from app.db.prisma_client import prisma
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, get_current_user_or_dev
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/messages", tags=["messages"])  # canonical path
@@ -63,7 +63,7 @@ async def create_message(payload: MessageCreate, user=Depends(get_current_user))
     return MessageOut(**msg.dict())
 
 @router.get("/", response_model=List[MessageOut])
-async def list_messages(user=Depends(get_current_user), offset: int = Query(0, ge=0), limit: int = Query(50, le=100)):
+async def list_messages(user=Depends(get_current_user_or_dev), offset: int = Query(0, ge=0), limit: int = Query(50, le=100)):
     msgs = await prisma.message.find_many(
         where={
             'OR': [

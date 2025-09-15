@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional, Union, Any
 from pydantic import BaseModel
-from app.api.auth import get_current_user, require_role
+from app.api.auth import get_current_user, get_current_user_or_dev, require_role
 from app.db.prisma_client import prisma
 
 router = APIRouter(prefix="/students", tags=["students"])
@@ -30,7 +30,7 @@ async def create_student(payload: StudentCreate, user=Depends(require_role("admi
     return StudentOut(**st.dict())
 
 @router.get("/", response_model=List[StudentOut])
-async def list_students(user=Depends(get_current_user), offset: int = Query(0, ge=0), limit: int = Query(50, le=100), with_meta: bool = Query(False)):
+async def list_students(user=Depends(get_current_user_or_dev), offset: int = Query(0, ge=0), limit: int = Query(50, le=100), with_meta: bool = Query(False)):
     where: dict = {}
     if user.role == 'parent' and user.parent:
         where['parent_id'] = user.parent.id

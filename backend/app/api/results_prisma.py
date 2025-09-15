@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 import time
 from pydantic import BaseModel
-from app.api.auth import get_current_user, require_role
+from app.api.auth import get_current_user, get_current_user_or_dev, require_role
 from app.db.prisma_client import prisma
 
 router = APIRouter(prefix="/results", tags=["results"])
@@ -69,7 +69,7 @@ async def create_result(payload: ResultCreate, user=Depends(require_role("teache
     return ResultOut(**res.dict())
 
 @router.get("/", response_model=List[ResultOut])
-async def list_results(user=Depends(get_current_user), offset: int = Query(0, ge=0), limit: int = Query(50, le=200), student_id: Optional[int] = None, term: Optional[str] = None):
+async def list_results(user=Depends(get_current_user_or_dev), offset: int = Query(0, ge=0), limit: int = Query(50, le=200), student_id: Optional[int] = None, term: Optional[str] = None):
     where: dict = {}
     if user.role == 'teacher' and user.teacher:
         classes = await prisma.classmodel.find_many(where={'teacher_id': user.teacher.id})

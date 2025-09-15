@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import os, time, jwt, secrets, hashlib
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
+from typing import Optional
 from app.db.prisma_client import prisma
 from typing import Any
 
@@ -17,6 +18,8 @@ _login_attempts = {}  # ip -> [timestamps]
 
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+# Optional scheme to allow missing tokens without triggering a 401 automatically
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 class LoginRequest(BaseModel):
     email: str
@@ -199,3 +202,22 @@ def require_role(role: str):
             raise HTTPException(status_code=403, detail="Forbidden")
         return user
     return role_dependency
+
+# In dev mode, allow requests without a token to be treated as admin for read-only endpoints
+class _DevUser:
+    id = -1
+    role = "admin"
+    parent = None
+    teacher = None
+    status = "active"
+    email_verified = True
+
+async def get_current_user_or_dev(token: Optional[str] = Depends(oauth2_scheme_optional)):
+    if token:
+        user = await verify_token(token)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return user
+    if AUTH_DEV_MODE:
+        return _DevUser()
+    raise HTTPException(status_code=401, detail="Not authenticated")

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
-from app.api.auth import get_current_user, require_role
+from app.api.auth import get_current_user, get_current_user_or_dev, require_role
 from app.db.prisma_client import prisma
 
 router = APIRouter(prefix="/classes", tags=["classes"])  # replacing legacy
@@ -34,7 +34,7 @@ async def create_class(payload: ClassCreate, user=Depends(require_role("admin"))
     return ClassOut(id=cls.id, name=cls.name, teacher_id=cls.teacher_id, room=cls.room, subjects=subs, expected_students=cls.expected_students)
 
 @router.get("/", response_model=List[ClassOut])
-async def list_classes(user=Depends(get_current_user), offset: int = Query(0, ge=0), limit: int = Query(50, le=100), with_meta: bool = Query(False)):
+async def list_classes(user=Depends(get_current_user_or_dev), offset: int = Query(0, ge=0), limit: int = Query(50, le=100), with_meta: bool = Query(False)):
     where = {}
     if user.role == 'teacher' and user.teacher:
         where['teacher_id'] = user.teacher.id

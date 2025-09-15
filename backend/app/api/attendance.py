@@ -4,7 +4,7 @@ from datetime import datetime, date
 import time
 from prisma import Prisma
 
-from app.api.auth import get_current_user, require_role
+from app.api.auth import get_current_user, get_current_user_or_dev, require_role
 from app.db.prisma_client import prisma as _prisma, init_prisma as _init_prisma
 
 async def get_prisma() -> Prisma:
@@ -125,7 +125,7 @@ async def create_attendance_record(
 @router.get("/", response_model=List[dict])
 async def list_attendance_records(
     prisma: Prisma = Depends(get_prisma),
-    user = Depends(get_current_user),
+    user = Depends(get_current_user_or_dev),
     offset: int = Query(0, ge=0),
     limit: int = Query(50, le=200),
     student_id: Optional[int] = None,
@@ -313,7 +313,7 @@ async def delete_attendance_record(
 @router.get("/summary", response_model=dict)
 async def get_attendance_summary(
     prisma: Prisma = Depends(get_prisma),
-    user = Depends(get_current_user),
+    user = Depends(get_current_user_or_dev),
     student_id: Optional[int] = None,
     class_id: Optional[int] = None,
     date_from: Optional[str] = None,
@@ -391,7 +391,7 @@ async def get_attendance_summary(
 async def get_daily_attendance(
     date: str,
     prisma: Prisma = Depends(get_prisma),
-    user = Depends(require_role("teacher")),
+    user = Depends(get_current_user_or_dev),
     class_id: Optional[int] = None
 ):
     """Get daily attendance for teacher's classes"""

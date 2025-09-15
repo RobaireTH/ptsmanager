@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
-from app.api.auth import get_current_user, require_role
+from app.api.auth import get_current_user, get_current_user_or_dev, require_role
 from app.db.prisma_client import prisma
 
 router = APIRouter(prefix="/events", tags=["events"])  # replacing legacy
@@ -29,7 +29,7 @@ async def create_event(payload: EventCreate, user=Depends(require_role("admin"))
     return EventOut(**ev.dict())
 
 @router.get("/", response_model=List[EventOut])
-async def list_events(user=Depends(get_current_user), offset: int = Query(0, ge=0), limit: int = Query(50, le=100)):
+async def list_events(user=Depends(get_current_user_or_dev), offset: int = Query(0, ge=0), limit: int = Query(50, le=100)):
     events = await prisma.event.find_many(skip=offset, take=limit, order={'id': 'desc'})
     return [EventOut(**e.dict()) for e in events]
 
