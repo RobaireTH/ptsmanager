@@ -53,6 +53,10 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   const { data: messages = [], isLoading: messagesLoading } = useMessages();
   const { data: users = [], isLoading: usersLoading } = useUsers();
   const loading = teachersLoading || studentsLoading || parentsLoading || classesLoading || eventsLoading || messagesLoading || usersLoading;
+
+  // Derive role-based user lists for display
+  const teacherUsers = users.filter(u => (u.role || '').toLowerCase() === 'teacher');
+  const parentUsers = users.filter(u => (u.role || '').toLowerCase() === 'parent');
   const error = undefined; // central toast handles errors
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -92,11 +96,11 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
   const teacherEmail = (t: Teacher) => users.find(u=>u.id===t.user_id)?.email || 'Unknown';
   const teacherStatus = (t: Teacher) => t.status || users.find(u=>u.id===t.user_id)?.status || 'Unknown';
 
-  // Calculate dynamic stats
+  // Calculate dynamic stats (by user role for teachers/parents)
   const schoolStats = {
     totalStudents: students.length,
-    totalTeachers: teachers.length,
-    totalParents: parents.length,
+    totalTeachers: teacherUsers.length,
+    totalParents: parentUsers.length,
     totalClasses: classes.length,
     attendanceRate: 93.8, // Default value, could be calculated from actual data
     averageGrade: 78.5 // Default value, could be calculated from actual data
@@ -741,6 +745,47 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                           </TableCell>
                         </TableRow>
                       ))}
+                      {/* Also list teacher users without a teacher profile */}
+                      {teacherUsers
+                        .filter(u => !teachers.some(t => t.user_id === u.id))
+                        .filter(u => {
+                          const q = searchQuery.toLowerCase();
+                          return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                        })
+                        .map((u) => (
+                          <TableRow key={`teacher-user-${u.id}`}>
+                            <TableCell>
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src="" alt={u.name} />
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                  {getInitials(u.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <div>
+                                <p>{u.name}</p>
+                                <p className="text-xs text-muted-foreground sm:hidden">—</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">—</TableCell>
+                            <TableCell className="hidden md:table-cell">—</TableCell>
+                            <TableCell className="hidden lg:table-cell">{u.email}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{u.status || 'active'}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
                   </Table>
                 </div>
@@ -926,10 +971,6 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                     <CardTitle>Parent Management</CardTitle>
                     <CardDescription>Manage parent accounts and contact information</CardDescription>
                   </div>
-                  <Button className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Parent
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -947,11 +988,12 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {parents.length === 0 && !parentsLoading && (
+                      {parents.length === 0 && parentUsers.length === 0 && !parentsLoading && (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center text-muted-foreground py-6">No parents yet</TableCell>
                         </TableRow>
                       )}
+                      {/* Show Parent profiles first */}
                       {parents.map((parent) => {
                         const parentUser = users.find(u => u.id === parent.user_id);
                         const displayName = parentUser?.name || `Parent #${parent.id}`;
@@ -992,6 +1034,47 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                           </TableRow>
                         );
                       })}
+                      {/* Then show parent users that don't yet have a Parent profile */}
+                      {parentUsers
+                        .filter(u => !parents.some(p => p.user_id === u.id))
+                        .filter(u => {
+                          const q = searchQuery.toLowerCase();
+                          return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                        })
+                        .map((u) => (
+                          <TableRow key={`parent-user-${u.id}`}>
+                            <TableCell>
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src="" alt={u.name} />
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                  {getInitials(u.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <div>
+                                <p>{u.name}</p>
+                                <p className="text-xs text-muted-foreground sm:hidden">{u.email}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">{u.email}</TableCell>
+                            <TableCell className="hidden md:table-cell">—</TableCell>
+                            <TableCell className="hidden lg:table-cell">-</TableCell>
+                            <TableCell>
+                              <Badge variant="default">{u.status || 'active'}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
                 </Table>
                 </div>
