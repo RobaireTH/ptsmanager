@@ -15,9 +15,25 @@ from app.api import results_prisma as results
 from app.db.prisma_client import init_prisma, close_prisma
 from prisma import Prisma
 import pathlib, time
+from urllib.parse import urlparse
+
+def _ensure_sqlite_parent_dir():
+    # Best-effort: create parent dir for SQLite when DATABASE_URL is file:...
+    db_url = os.getenv("DATABASE_URL", "file:./ptsmanager.db")
+    parsed = urlparse(db_url)
+    if parsed.scheme == "file":
+        path = parsed.path or "./ptsmanager.db"
+        p = pathlib.Path(path)
+        parent = p.parent
+        try:
+            parent.mkdir(parents=True, exist_ok=True)
+            print(f"[startup] Ensured SQLite parent dir: {parent}")
+        except Exception as e:
+            print(f"[startup] Could not create SQLite parent dir {parent}: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _ensure_sqlite_parent_dir()
     await init_prisma()
     yield
     await close_prisma()
