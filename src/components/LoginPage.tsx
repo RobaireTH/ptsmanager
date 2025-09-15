@@ -132,9 +132,6 @@ export function LoginPage({ onLogin, onSwitchToSignup, onSwitchToForgot }: Login
 
           <div className="text-center space-y-2">
             <p className="text-muted-foreground">
-              Demo: Use any email/password combination
-            </p>
-            <p className="text-muted-foreground">
               Don't have an account?{' '}
               <button 
                 onClick={onSwitchToSignup}
