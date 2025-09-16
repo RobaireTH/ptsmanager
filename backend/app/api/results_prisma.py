@@ -93,6 +93,20 @@ async def list_results(user=Depends(get_current_user_or_dev), offset: int = Quer
     res = await prisma.result.find_many(where=where or None, skip=offset, take=limit, order={'id': 'desc'})
     return [ResultOut(**r.dict()) for r in res]
 
+@router.get("/admin/teacher-performance", response_model=dict)
+async def teacher_performance(user=Depends(get_current_user_or_dev)):
+    if (getattr(user, 'role', '') or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
+    # Basic metric: average score per teacher across all results
+    results = await prisma.result.find_many()
+    from collections import defaultdict
+    totals = defaultdict(lambda: {"sum": 0, "count": 0})
+    for r in results:
+        totals[r.teacher_id]["sum"] += r.score
+        totals[r.teacher_id]["count"] += 1
+    averages = {str(tid): round(v["sum"]/v["count"], 2) if v["count"] else 0 for tid, v in totals.items()}
+    return {"averages": averages, "teacher_count": len(averages)}
+
 @router.patch("/{result_id}", response_model=ResultOut)
 async def update_result(result_id: int, payload: ResultUpdate, user=Depends(get_current_user)):
     res = await prisma.result.find_unique(where={'id': result_id})

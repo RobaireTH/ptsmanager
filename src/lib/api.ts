@@ -135,7 +135,7 @@ const defaultBase = isBrowser && !isLocalhost ? "" : "http://localhost:8000";
 // Use nullish coalescing to allow '' (same-origin)
 const API_BASE = ((runtimeBase ?? envBase ?? defaultBase) as string).replace(
   /\/$/,
-  "",
+  ""
 );
 // One-time diagnostic log (ignored by most users, helpful during deployment troubleshooting)
 if (isBrowser && !(window as any).__API_BASE_LOGGED) {
@@ -156,7 +156,7 @@ function getRefreshToken(): string | null {
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  _retried = false,
+  _retried = false
 ): Promise<T> {
   let token = getAuthToken();
   // Start with caller-provided headers so explicit Authorization can override any stored token
@@ -166,7 +166,7 @@ async function request<T>(
   };
   // Only inject Authorization from localStorage if the caller DID NOT provide one
   const hasExplicitAuth = Object.keys(baseHeaders).some(
-    (k) => k.toLowerCase() === "authorization",
+    (k) => k.toLowerCase() === "authorization"
   );
   if (!hasExplicitAuth && token) {
     baseHeaders["Authorization"] = `Bearer ${token}`;
@@ -223,7 +223,7 @@ async function request<T>(
 
 export async function login(
   email: string,
-  password: string,
+  password: string
 ): Promise<TokenResponse> {
   return request<TokenResponse>("/api/auth/login", {
     method: "POST",
@@ -259,7 +259,7 @@ export async function getMe(token: string): Promise<UserMe> {
 }
 
 export async function requestEmailVerification(
-  email: string,
+  email: string
 ): Promise<{ sent: boolean; verification_token?: string }> {
   return request("/api/auth/request-email-verification", {
     method: "POST",
@@ -268,7 +268,7 @@ export async function requestEmailVerification(
 }
 
 export async function verifyEmail(
-  token: string,
+  token: string
 ): Promise<{ verified: boolean }> {
   return request("/api/auth/verify-email", {
     method: "POST",
@@ -277,7 +277,7 @@ export async function verifyEmail(
 }
 
 export async function requestPasswordReset(
-  email: string,
+  email: string
 ): Promise<{ sent: boolean; reset_token?: string }> {
   return request("/api/auth/forgot-password", {
     method: "POST",
@@ -287,7 +287,7 @@ export async function requestPasswordReset(
 
 export async function resetPassword(
   token: string,
-  new_password: string,
+  new_password: string
 ): Promise<{ reset: boolean }> {
   return request("/api/auth/reset-password", {
     method: "POST",
@@ -302,7 +302,7 @@ export async function getUsers(): Promise<UserMe[]> {
 
 export async function updateUser(
   userId: number,
-  data: Partial<UserMe>,
+  data: Partial<UserMe>
 ): Promise<UserMe> {
   return request<UserMe>(`/api/users/${userId}`, {
     method: "PATCH",
@@ -311,7 +311,7 @@ export async function updateUser(
 }
 
 export async function deleteUser(
-  userId: number,
+  userId: number
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/users/${userId}`, {
     method: "DELETE",
@@ -336,7 +336,7 @@ export async function createTeacher(data: {
 
 export async function updateTeacher(
   teacherId: number,
-  data: Partial<Teacher>,
+  data: Partial<Teacher>
 ): Promise<Teacher> {
   return request<Teacher>(`/api/teachers/${teacherId}`, {
     method: "PATCH",
@@ -345,7 +345,7 @@ export async function updateTeacher(
 }
 
 export async function deleteTeacher(
-  teacherId: number,
+  teacherId: number
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/teachers/${teacherId}`, {
     method: "DELETE",
@@ -370,7 +370,7 @@ export async function createParent(data: {
 
 export async function updateParent(
   parentId: number,
-  data: Partial<Parent>,
+  data: Partial<Parent>
 ): Promise<Parent> {
   return request<Parent>(`/api/parents/${parentId}`, {
     method: "PATCH",
@@ -379,7 +379,7 @@ export async function updateParent(
 }
 
 export async function deleteParent(
-  parentId: number,
+  parentId: number
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/parents/${parentId}`, {
     method: "DELETE",
@@ -407,7 +407,7 @@ export async function createStudent(data: {
 
 export async function updateStudent(
   studentId: number,
-  data: Partial<Student>,
+  data: Partial<Student>
 ): Promise<Student> {
   return request<Student>(`/api/students/${studentId}`, {
     method: "PATCH",
@@ -416,7 +416,7 @@ export async function updateStudent(
 }
 
 export async function deleteStudent(
-  studentId: number,
+  studentId: number
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/students/${studentId}`, {
     method: "DELETE",
@@ -443,7 +443,7 @@ export async function createClass(data: {
 
 export async function updateClass(
   classId: number,
-  data: Partial<Class>,
+  data: Partial<Class>
 ): Promise<Class> {
   return request<Class>(`/api/classes/${classId}`, {
     method: "PATCH",
@@ -452,7 +452,7 @@ export async function updateClass(
 }
 
 export async function deleteClass(
-  classId: number,
+  classId: number
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/classes/${classId}`, {
     method: "DELETE",
@@ -480,7 +480,7 @@ export async function createEvent(data: {
 
 export async function updateEvent(
   eventId: number,
-  data: Partial<Event>,
+  data: Partial<Event>
 ): Promise<Event> {
   return request<Event>(`/api/events/${eventId}`, {
     method: "PATCH",
@@ -489,7 +489,7 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(
-  eventId: number,
+  eventId: number
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/events/${eventId}`, {
     method: "DELETE",
@@ -511,6 +511,34 @@ export async function createMessage(data: {
     method: "POST",
     body: JSON.stringify(data),
   });
+}
+
+export async function broadcastMessage(data: {
+  subject: string;
+  body?: string;
+  audience: "all_parents" | "all_teachers" | "class";
+  class_id?: number;
+}): Promise<{ sent: number; recipient_count: number }> {
+  return request<{ sent: number; recipient_count: number }>(
+    "/api/messages/broadcast",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+export async function adminListMessages(params?: {
+  offset?: number;
+  limit?: number;
+}): Promise<Message[]> {
+  const q = new URLSearchParams();
+  if (params?.offset != null) q.set("offset", String(params.offset));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const path = q.toString()
+    ? `/api/messages/admin?${q}`
+    : "/api/messages/admin";
+  return request<Message[]>(path);
 }
 
 // Results
@@ -549,9 +577,7 @@ export async function createResult(data: {
 
 export async function updateResult(
   resultId: number,
-  data: Partial<
-    Omit<Result, "id" | "student_id" | "teacher_id" | "created_at">
-  >,
+  data: Partial<Omit<Result, "id" | "student_id" | "teacher_id" | "created_at">>
 ): Promise<Result> {
   return request<Result>(`/api/results/${resultId}`, {
     method: "PATCH",
@@ -560,7 +586,7 @@ export async function updateResult(
 }
 
 export async function deleteResult(
-  resultId: number,
+  resultId: number
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/results/${resultId}`, {
     method: "DELETE",
@@ -617,7 +643,7 @@ export async function updateAttendance(
   data: {
     status?: "present" | "absent" | "late" | "excused";
     notes?: string;
-  },
+  }
 ): Promise<Attendance> {
   const q = new URLSearchParams();
   if (data.status) q.set("status", data.status);
@@ -627,12 +653,12 @@ export async function updateAttendance(
     `/api/attendance/${attendanceId}?${q.toString()}`,
     {
       method: "PATCH",
-    },
+    }
   );
 }
 
 export async function deleteAttendance(
-  attendanceId: number,
+  attendanceId: number
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/attendance/${attendanceId}`, {
     method: "DELETE",
@@ -656,9 +682,39 @@ export async function getAttendanceSummary(params?: {
   return request<AttendanceSummary>(path);
 }
 
+export async function getAttendanceSummaryAdmin(params?: {
+  class_id?: number;
+  date_from?: string;
+  date_to?: string;
+}): Promise<AttendanceSummary> {
+  const q = new URLSearchParams();
+  if (params?.class_id != null) q.set("class_id", String(params.class_id));
+  if (params?.date_from) q.set("date_from", params.date_from);
+  if (params?.date_to) q.set("date_to", params.date_to);
+  const qs = q.toString();
+  const path = qs
+    ? `/api/attendance/summary/admin?${qs}`
+    : "/api/attendance/summary/admin";
+  return request<AttendanceSummary>(path);
+}
+
+export async function getTeacherPerformanceAdmin(): Promise<{
+  averages: Record<string, number>;
+  teacher_count: number;
+}> {
+  return request("/api/results/admin/teacher-performance");
+}
+
+export async function getParentEngagementAdmin(): Promise<{
+  total_parents: number;
+  linked_parents: number;
+}> {
+  return request("/api/parents/engagement/admin");
+}
+
 export async function getDailyAttendance(
   date: string,
-  class_id?: number,
+  class_id?: number
 ): Promise<any[]> {
   const q = new URLSearchParams();
   if (class_id != null) q.set("class_id", String(class_id));

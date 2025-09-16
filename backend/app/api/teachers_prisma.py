@@ -45,7 +45,9 @@ async def list_teachers(user=Depends(get_current_user_or_dev), offset: int = Que
     return out
 
 @router.patch("/{teacher_id}", response_model=TeacherOut)
-async def update_teacher(teacher_id: int, payload: dict, user=Depends(get_current_user)):
+async def update_teacher(teacher_id: int, payload: dict, user=Depends(get_current_user_or_dev)):
+    if (getattr(user, 'role', None) or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
     t = await prisma.teacher.find_unique(where={"id": teacher_id})
     if not t:
         raise HTTPException(status_code=404, detail="Teacher not found")
@@ -62,7 +64,9 @@ async def update_teacher(teacher_id: int, payload: dict, user=Depends(get_curren
     return TeacherOut(id=t.id, user_id=t.user_id, phone=t.phone, subjects=subs, status=t.status)
 
 @router.delete("/{teacher_id}")
-async def delete_teacher(teacher_id: int, user=Depends(get_current_user)):
+async def delete_teacher(teacher_id: int, user=Depends(get_current_user_or_dev)):
+    if (getattr(user, 'role', None) or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
     t = await prisma.teacher.find_unique(where={"id": teacher_id})
     if not t:
         raise HTTPException(status_code=404, detail="Teacher not found")

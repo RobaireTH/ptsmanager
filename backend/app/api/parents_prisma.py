@@ -32,6 +32,16 @@ async def list_parents(user=Depends(get_current_user_or_dev), offset: int = Quer
     parents = await prisma.parent.find_many(skip=offset, take=limit, order={"id": "desc"})
     return [ParentOut(**p.dict()) for p in parents]
 
+@router.get("/engagement/admin", response_model=dict)
+async def parent_engagement_admin(user=Depends(get_current_user_or_dev)):
+    if (getattr(user, 'role', '') or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
+    total_parents = await prisma.parent.count()
+    # naive proxy: number of parents who have at least one student
+    from prisma import Prisma
+    linked = await prisma.student.count(where={"parent_id": {"not": None}})
+    return {"total_parents": total_parents, "linked_parents": linked}
+
 @router.patch("/{parent_id}", response_model=ParentOut)
 async def update_parent(parent_id: int, payload: dict, user=Depends(get_current_user)):
     p = await prisma.parent.find_unique(where={"id": parent_id})

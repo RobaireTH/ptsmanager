@@ -387,11 +387,53 @@ async def get_attendance_summary(
     }
 
 
+@router.get("/summary/admin", response_model=dict)
+async def get_attendance_summary_admin(
+    prisma: Prisma = Depends(get_prisma),
+    user = Depends(get_current_user_or_dev),
+    class_id: Optional[int] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None
+):
+    """Admin-level summary across entire school or a specific class."""
+    if (getattr(user, 'role', '') or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    where_conditions = {}
+    if class_id is not None:
+        where_conditions["class_id"] = class_id
+    if date_from or date_to:
+        date_filter = {}
+        if date_from:
+            date_filter["gte"] = _date_to_iso(date_from)
+        if date_to:
+            date_filter["lte"] = _date_to_iso(date_to)
+        where_conditions["date"] = date_filter
+
+    records = await prisma.attendance.find_many(where=where_conditions or None)
+    total = len(records)
+    present = len([r for r in records if r.status == "present"]) 
+    absent = len([r for r in records if r.status == "absent"]) 
+    late = len([r for r in records if r.status == "late"]) 
+    excused = len([r for r in records if r.status == "excused"]) 
+    attended = present + late
+    percentage = round((attended / total * 100), 2) if total > 0 else 0
+    return {
+        "total": total,
+        "present": present,
+        "absent": absent,
+        "late": late,
+        "excused": excused,
+        "attended": attended,
+        "percentage": percentage
+    }
+
+
 @router.get("/daily/{date}", response_model=List[dict])
 async def get_daily_attendance(
     date: str,
     prisma: Prisma = Depends(get_prisma),
-    user = Depends(get_current_user_or_dev),
+    user = Depends(require_role("teacher")),
     class_id: Optional[int] = None
 ):
     """Get daily attendance for teacher's classes"""
