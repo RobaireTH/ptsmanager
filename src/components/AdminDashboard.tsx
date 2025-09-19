@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Users, GraduationCap, UserCheck, School, TrendingUp, AlertCircle, Search, Plus, Edit, Trash2, Bell, MessageSquare } from 'lucide-react';
-import { createTeacher, updateTeacher, deleteTeacher, createStudent, createClass, createEvent, createUser, updateStudent, updateClass, createParent, Teacher } from '../lib/api'; // createUser reserved for future admin user creation
+import { updateStudent, updateClass, createParent, broadcastMessage, deleteUser, ensureTeacherByEmail, Teacher } from '../lib/api';
 import { 
   useTeachers,
   useStudents,
@@ -134,11 +134,36 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
     if (!confirm('Are you sure you want to delete this teacher?')) return;
     
     try {
-  await deleteTeacherMutation.mutateAsync(teacherId);
-  toast.success('Teacher deleted');
+      await deleteTeacherMutation.mutateAsync(teacherId);
+      toast.success('Teacher deleted');
     } catch (err: any) {
       console.error('Error deleting teacher:', err);
-  toast.error(err.message || 'Failed to delete teacher');
+      toast.error(err.message || 'Failed to delete teacher');
+    }
+  };
+
+  const handleDeleteTeacherUser = async (userId: number) => {
+    if (!confirm('Are you sure you want to delete this teacher user? This will permanently remove their account.')) return;
+    
+    try {
+      await deleteUser(userId);
+      await qc.invalidateQueries({ queryKey: qk.users });
+      toast.success('Teacher user deleted');
+    } catch (err: any) {
+      console.error('Error deleting teacher user:', err);
+      toast.error(err.message || 'Failed to delete teacher user');
+    }
+  };
+
+  const handleCreateTeacherProfile = async (email: string) => {
+    try {
+      await ensureTeacherByEmail({ email });
+      await qc.invalidateQueries({ queryKey: qk.teachers });
+      await qc.invalidateQueries({ queryKey: qk.users });
+      toast.success('Teacher profile created');
+    } catch (err: any) {
+      console.error('Error creating teacher profile:', err);
+      toast.error(err.message || 'Failed to create teacher profile');
     }
   };
 
@@ -776,10 +801,22 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleCreateTeacherProfile(u.email)}
+                                  title="Create teacher profile"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
                                 <Button size="sm" variant="outline">
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                <Button size="sm" variant="outline">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleDeleteTeacherUser(u.id)}
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -1402,17 +1439,68 @@ export function AdminDashboard({ userData, onLogout }: AdminDashboardProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button className="flex items-center gap-2">
+                    <Button 
+                      className="flex items-center gap-2"
+                      onClick={() => {
+                        const subject = prompt("Enter message subject:");
+                        const body = prompt("Enter message body:");
+                        if (subject && body) {
+                          broadcastMessage({
+                            subject,
+                            body,
+                            recipient_role: "parent"
+                          }).then(() => {
+                            toast.success("Message sent to all parents");
+                          }).catch((err) => {
+                            toast.error("Failed to send message: " + err.message);
+                          });
+                        }
+                      }}
+                    >
                       <MessageSquare className="h-4 w-4" />
                       Send Message to All Parents
                     </Button>
-                    <Button className="flex items-center gap-2">
+                    <Button 
+                      className="flex items-center gap-2"
+                      onClick={() => {
+                        const subject = prompt("Enter message subject:");
+                        const body = prompt("Enter message body:");
+                        if (subject && body) {
+                          broadcastMessage({
+                            subject,
+                            body,
+                            recipient_role: "teacher"
+                          }).then(() => {
+                            toast.success("Message sent to all teachers");
+                          }).catch((err) => {
+                            toast.error("Failed to send message: " + err.message);
+                          });
+                        }
+                      }}
+                    >
                       <MessageSquare className="h-4 w-4" />
                       Send Message to All Teachers
                     </Button>
-                    <Button className="flex items-center gap-2">
+                    <Button 
+                      className="flex items-center gap-2"
+                      onClick={() => {
+                        const subject = prompt("Enter message subject:");
+                        const body = prompt("Enter message body:");
+                        if (subject && body) {
+                          broadcastMessage({
+                            subject,
+                            body,
+                            recipient_role: "all"
+                          }).then(() => {
+                            toast.success("Message sent to all users");
+                          }).catch((err) => {
+                            toast.error("Failed to send message: " + err.message);
+                          });
+                        }
+                      }}
+                    >
                       <MessageSquare className="h-4 w-4" />
-                      Send Message to Specific Class
+                      Send Message to All Users
                     </Button>
                     <Button className="flex items-center gap-2">
                       <MessageSquare className="h-4 w-4" />

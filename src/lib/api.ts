@@ -295,6 +295,14 @@ export async function resetPassword(
   });
 }
 
+// Admin utility: set a user's password without SMTP
+export async function adminSetPassword(payload: { user_id: number; new_password: string }): Promise<{ updated: true }> {
+  return request("/api/auth/admin/set-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 // User Management
 export async function getUsers(): Promise<UserMe[]> {
   return request<UserMe[]>("/api/users/");
@@ -349,6 +357,36 @@ export async function deleteTeacher(
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/teachers/${teacherId}`, {
     method: "DELETE",
+  });
+}
+
+// Admin utility: ensure teacher profile exists
+export async function ensureTeacher(data: { user_id: number }): Promise<{ id: number; user_id: number }> {
+  return request<{ id: number; user_id: number }>("/api/teachers/ensure", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function ensureTeacherByEmail(data: { email: string }): Promise<{ id: number; user_id: number }> {
+  return request<{ id: number; user_id: number }>("/api/teachers/ensure-by-email", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// New function to create teacher with user creation
+export async function createTeacherWithUser(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  subjects?: string[];
+  password?: string;
+  classId?: number;
+}): Promise<Teacher> {
+  return request<Teacher>("/api/teachers/create-with-user", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 
@@ -508,6 +546,17 @@ export async function createMessage(data: {
   recipient_role?: string;
 }): Promise<Message> {
   return request<Message>("/api/messages/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function broadcastMessage(data: {
+  subject: string;
+  body: string;
+  recipient_role: string;
+}): Promise<Message> {
+  return request<Message>("/api/messages/broadcast", {
     method: "POST",
     body: JSON.stringify(data),
   });

@@ -221,3 +221,28 @@ async def get_current_user_or_dev(token: Optional[str] = Depends(oauth2_scheme_o
     if AUTH_DEV_MODE:
         return _DevUser()
     raise HTTPException(status_code=401, detail="Not authenticated")
+
+
+# Admin utility: set a user's password without email (no SMTP flow)
+class AdminSetPasswordRequest(BaseModel):
+    user_id: int
+    new_password: str
+
+@router.post("/admin/set-password")
+async def admin_set_password(payload: AdminSetPasswordRequest, _admin=Depends(require_role("admin"))):
+    user = await prisma.user.find_unique(where={"id": payload.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Reuse the same password policy as reset_password
+    pw = payload.new_password or ""
+    if not any(c.islower() for c in pw) or not any(c.isupper() for c in pw) or not any(c.isdigit() for c in pw) or len(pw) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 chars with lowercase, uppercase, and digits")
+    await prisma.user.update(where={"id": user.id}, data={
+        "password_hash": pwd_ctx.hash(pw),
+        "password_reset_token": None,
+        "password_reset_expires_at": None,
+        # Clear refresh token to force re-login everywhere
+        "refresh_token_hash": None,
+        "refresh_token_expires_at": None,
+    })
+    return {"updated": True}

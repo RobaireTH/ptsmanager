@@ -45,6 +45,10 @@ class ResultOut(BaseModel):
 
 @router.post("/", response_model=ResultOut)
 async def create_result(payload: ResultCreate, user=Depends(require_role("teacher"))):
+    # Ensure teacher profile exists
+    if not user.teacher:
+        raise HTTPException(status_code=403, detail="Teacher profile not found. Please contact admin.")
+    
     # teacher must own class of student
     st = await prisma.student.find_unique(where={'id': payload.student_id})
     if not st:

@@ -7,7 +7,8 @@ import {
   getEvents,
   getUsers,
   getParents,
-  createTeacher,
+  ensureTeacher,
+  ensureTeacherByEmail,
   createUser,
   createStudent,
   createClass,
@@ -16,13 +17,8 @@ import {
   updateTeacher,
   getResults,
   createResult,
+  createTeacherWithUser,
   Teacher,
-  Student,
-  Class,
-  Event,
-  Message,
-  Result,
-  UserMe
 } from './api';
 
 export const qk = {
@@ -72,8 +68,14 @@ export function useCreateTeacher() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { name: string; email: string; phone?: string; subjects?: string[] }) => {
-      const user = await createUser({ name: payload.name, email: payload.email, password: 'TempPass123!', role: 'teacher' });
-      return createTeacher({ user_id: user.id, phone: payload.phone, subjects: payload.subjects });
+      // Use the new endpoint that handles both user creation and teacher profile creation
+      return createTeacherWithUser({
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        subjects: payload.subjects,
+        password: 'TempPass123!' // Default password for admin-created accounts
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.teachers });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -10,7 +10,7 @@ import { UserCheck, Users, Eye, EyeOff } from 'lucide-react';
 // Replaced missing Figma asset with existing logo asset
 import schoolLogo from '../assets/logo.jpg';
 import studentsImage from '../assets/a9fb3a683259798a4a27feea2731b90f66e5a88e.png';
-import { createUser, login as apiLogin, getMe } from '../lib/api';
+import { createUser, login as apiLogin, getMe, getClasses, createTeacherWithUser } from '../lib/api';
 
 interface SignupPageProps {
   onLogin: (role: 'teacher' | 'parent' | 'admin', userData: any) => void;
@@ -24,8 +24,10 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
     password: '',
     confirmPassword: '',
     phone: '',
-    role: '' as 'teacher' | 'parent' | ''
+    role: '' as 'teacher' | 'parent' | '',
+    classId: '' as string
   });
+  const [classes, setClasses] = useState<any[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,6 +48,19 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
 
   const passwordMeetsPolicy = formData.password.length >= 8 && /[a-z]/.test(formData.password) && /[A-Z]/.test(formData.password) && /\d/.test(formData.password);
 
+  // Load classes when component mounts
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        const classesData = await getClasses();
+        setClasses(classesData);
+      } catch (err) {
+        console.error('Error loading classes:', err);
+      }
+    };
+    loadClasses();
+  }, []);
+
   const isFormValid = 
     formData.name.trim() !== '' &&
     formData.email.trim() !== '' &&
@@ -53,20 +68,31 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
     formData.confirmPassword.trim() !== '' &&
     formData.role !== '' &&
     formData.password === formData.confirmPassword &&
-    passwordMeetsPolicy;
+    passwordMeetsPolicy &&
+    (formData.role !== 'teacher' || formData.classId !== '');
 
   const handleSignup = async () => {
     if (!isFormValid || !formData.role) return;
 
     setLoading(true);
     try {
-      // Create user via backend
-      await createUser({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-      });
+      if (formData.role === 'teacher') {
+        // Create teacher with user and class assignment
+        await createTeacherWithUser({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          classId: parseInt(formData.classId),
+        });
+      } else {
+        // Create regular user for parents
+        await createUser({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+        });
+      }
 
       // Auto-login
       const tokenRes = await apiLogin(formData.email, formData.password);
@@ -149,6 +175,27 @@ export function SignupPage({ onLogin, onSwitchToLogin }: SignupPageProps) {
               onChange={(e) => handleInputChange('email', e.target.value)}
             />
           </div>
+
+          {formData.role === 'teacher' && (
+            <div className="space-y-2">
+              <Label htmlFor="class">Select Class</Label>
+              <Select value={formData.classId} onValueChange={(value) => handleInputChange('classId', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose your class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes.map((cls) => (
+                    <SelectItem key={cls.id} value={cls.id.toString()}>
+                      {cls.name} {cls.room && `(${cls.room})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formData.role === 'teacher' && !formData.classId && (
+                <p className="text-destructive text-sm">Please select a class to continue</p>
+              )}
+            </div>
+          )}
 
           {formData.role === 'parent' && (
             <PhoneInput

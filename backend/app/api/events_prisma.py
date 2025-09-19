@@ -25,7 +25,12 @@ class EventOut(BaseModel):
 
 @router.post("/", response_model=EventOut)
 async def create_event(payload: EventCreate, user=Depends(require_role("admin"))):
-    ev = await prisma.event.create(data=payload.dict())
+    # Ensure status is set if not provided
+    event_data = payload.dict()
+    if not event_data.get("status"):
+        event_data["status"] = "scheduled"
+    
+    ev = await prisma.event.create(data=event_data)
     return EventOut(**ev.dict())
 
 @router.get("/", response_model=List[EventOut])
