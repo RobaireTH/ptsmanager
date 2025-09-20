@@ -12,6 +12,7 @@ from app.api import parents_prisma as parents
 from app.api import teachers_prisma as teachers
 from app.api import students_prisma as students
 from app.api import results_prisma as results
+from app.api import webhook
 from app.db.prisma_client import init_prisma, close_prisma
 from prisma import Prisma
 import pathlib, time
@@ -95,14 +96,20 @@ app.include_router(messages.router, prefix="/api")
 app.include_router(results.router, prefix="/api")
 app.include_router(attendance.router, prefix="/api")
 app.include_router(websockets.router, prefix="/api")
+app.include_router(webhook.router, prefix="/api")
 
 @app.get("/api/_debug/routes")
 async def list_routes():
     """Return list of registered routes (method -> path) for debugging 404 issues."""
-    return sorted([
-        {"path": r.path, "methods": sorted(list(r.methods))}
-        for r in app.routes
-    ], key=lambda x: x["path"])
+    routes = []
+    for r in app.routes:
+        try:
+            methods = sorted(list(r.methods)) if hasattr(r, "methods") and r.methods else ["WS"] if r.__class__.__name__ == "APIWebSocketRoute" else []
+            routes.append({"path": getattr(r, "path", str(getattr(r, "path_regex", "?"))), "methods": methods})
+        except Exception:
+            # Fallback minimal info
+            routes.append({"path": getattr(r, "path", "?"), "methods": []})
+    return sorted(routes, key=lambda x: x["path"])
 
 @app.get("/api/_debug/cors")
 async def cors_config():

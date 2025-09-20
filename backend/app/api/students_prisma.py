@@ -33,6 +33,7 @@ async def create_student(payload: StudentCreate, user=Depends(require_role("admi
 async def list_students(user=Depends(get_current_user_or_dev), offset: int = Query(0, ge=0), limit: int = Query(50, le=100), with_meta: bool = Query(False)):
     where: dict = {}
     if user.role == 'parent' and user.parent:
+        # Return all children for this parent
         where['parent_id'] = user.parent.id
     elif user.role == 'teacher' and user.teacher:
         # get classes for teacher

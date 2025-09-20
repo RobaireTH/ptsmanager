@@ -77,7 +77,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
     profilePicture: userData.profilePicture || null,
   });
   const [profilePicture, setProfilePicture] = useState(
-    userData.profilePicture || null,
+    userData.profilePicture || null
   );
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
@@ -103,6 +103,22 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
     loadData();
   }, []);
 
+  // Keep selectedChild in sync with fetched students for multi-child parents
+  useEffect(() => {
+    if (students.length === 0) {
+      setSelectedChild(null);
+      return;
+    }
+    if (!selectedChild) {
+      setSelectedChild(students[0]);
+      return;
+    }
+    const stillExists = students.find((s) => s.id === selectedChild.id);
+    if (!stillExists) {
+      setSelectedChild(students[0]);
+    }
+  }, [students]);
+
   useEffect(() => {
     const fetchResults = async () => {
       try {
@@ -118,7 +134,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
               score: r.score,
               grade: r.grade,
               date: r.date,
-            })),
+            }))
           );
         } else {
           setChildResults([]);
@@ -179,7 +195,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
   };
 
   const handleProfilePictureChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -322,7 +338,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
 
   const unreadCount = 0; // backend Message currently lacks status field
   const unreadNotifications = notifications.filter(
-    (notif) => !notif.read,
+    (notif) => !notif.read
   ).length;
 
   const getGradeColor = (grade: string) => {
@@ -361,14 +377,13 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   <p className="text-muted-foreground text-sm sm:text-base">
                     Parent Dashboard
                   </p>
-                  {(userData.childrenDetails || userData.children)?.length >
-                    1 && (
+                  {students.length > 1 && (
                     <Select
-                      value={selectedChild?.id || ""}
+                      value={selectedChild ? String(selectedChild.id) : ""}
                       onValueChange={(value: string) => {
-                        const children =
-                          userData.childrenDetails || userData.children || [];
-                        const child = children.find((c: any) => c.id === value);
+                        const child = students.find(
+                          (s) => String(s.id) === String(value)
+                        );
                         setSelectedChild(child || null);
                       }}
                     >
@@ -376,13 +391,12 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(
-                          userData.childrenDetails ||
-                          userData.children ||
-                          []
-                        ).map((child: any) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name} ({child.class})
+                        {students.map((child) => (
+                          <SelectItem key={child.id} value={String(child.id)}>
+                            {child.name}
+                            {child.class || child.class_id
+                              ? ` (${child.class || `Class ${child.class_id}`})`
+                              : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -411,7 +425,9 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                       {notifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className={`p-2 rounded-md border ${!notification.read ? "bg-accent" : "bg-background"}`}
+                          className={`p-2 rounded-md border ${
+                            !notification.read ? "bg-accent" : "bg-background"
+                          }`}
                         >
                           <p className="font-medium text-sm">
                             {notification.title}
@@ -565,7 +581,9 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                         </div>
                         <div className="text-right">
                           <p
-                            className={`font-medium ${getGradeColor(result.grade)}`}
+                            className={`font-medium ${getGradeColor(
+                              result.grade
+                            )}`}
                           >
                             {result.grade}
                           </p>
@@ -603,7 +621,13 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                           </div>
                           <div className="text-right">
                             <p
-                              className={`font-medium ${record.percentage >= 90 ? "text-green-600" : record.percentage >= 80 ? "text-yellow-600" : "text-red-600"}`}
+                              className={`font-medium ${
+                                record.percentage >= 90
+                                  ? "text-green-600"
+                                  : record.percentage >= 80
+                                  ? "text-yellow-600"
+                                  : "text-red-600"
+                              }`}
                             >
                               {record.percentage}%
                             </p>
@@ -841,10 +865,10 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                   <div className="space-y-2">
                     <Label>Regarding Child</Label>
                     <Select
-                      value={selectedChild?.id || ""}
+                      value={selectedChild ? String(selectedChild.id) : ""}
                       onValueChange={(value: string) => {
-                        const child = (userData.children || []).find(
-                          (c: any) => c.id === value,
+                        const child = students.find(
+                          (s) => String(s.id) === String(value)
                         );
                         setSelectedChild(child || null);
                       }}
@@ -853,13 +877,12 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(
-                          userData.childrenDetails ||
-                          userData.children ||
-                          []
-                        ).map((child: any) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name} ({child.class})
+                        {students.map((child) => (
+                          <SelectItem key={child.id} value={String(child.id)}>
+                            {child.name}
+                            {child.class || child.class_id
+                              ? ` (${child.class || `Class ${child.class_id}`})`
+                              : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1034,7 +1057,7 @@ export function ParentDashboard({ userData, onLogout }: ParentDashboardProps) {
                           </div>
                         </div>
                       </div>
-                    ),
+                    )
                   )}
                 </CardContent>
               </Card>

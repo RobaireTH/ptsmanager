@@ -76,7 +76,11 @@ async def verify_token(token: str):
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
         user_id = int(payload.get("sub"))
-        return await prisma.user.find_unique(where={"id": user_id})
+        # Include role relations so downstream role-based filters work
+        return await prisma.user.find_unique(
+            where={"id": user_id},
+            include={"parent": True, "teacher": True}
+        )
     except Exception:
         return None
 

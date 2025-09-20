@@ -54,7 +54,9 @@ async def list_classes(user=Depends(get_current_user_or_dev), offset: int = Quer
     return out
 
 @router.patch("/{class_id}", response_model=ClassOut)
-async def update_class(class_id: int, payload: dict, user=Depends(get_current_user)):
+async def update_class(class_id: int, payload: dict, user=Depends(get_current_user_or_dev)):
+    if (getattr(user, 'role', None) or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
     cls = await prisma.classmodel.find_unique(where={'id': class_id})
     if not cls:
         raise HTTPException(status_code=404, detail="Class not found")
@@ -70,7 +72,9 @@ async def update_class(class_id: int, payload: dict, user=Depends(get_current_us
     return ClassOut(id=cls.id, name=cls.name, teacher_id=cls.teacher_id, room=cls.room, subjects=subs, expected_students=cls.expected_students)
 
 @router.delete("/{class_id}")
-async def delete_class(class_id: int, user=Depends(get_current_user)):
+async def delete_class(class_id: int, user=Depends(get_current_user_or_dev)):
+    if (getattr(user, 'role', None) or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
     cls = await prisma.classmodel.find_unique(where={'id': class_id})
     if not cls:
         raise HTTPException(status_code=404, detail="Class not found")

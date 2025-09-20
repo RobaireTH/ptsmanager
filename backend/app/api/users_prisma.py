@@ -4,7 +4,7 @@ from app.db.prisma_client import prisma
 from typing import List, Optional
 import secrets
 from pydantic import BaseModel, EmailStr
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, get_current_user_or_dev
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -61,7 +61,7 @@ async def create_user(payload: UserCreate):
 async def list_users(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, le=100),
-    _user=Depends(get_current_user),
+    _user=Depends(get_current_user_or_dev),
 ):
     await ensure_connected()
     items = await prisma.user.find_many(skip=offset, take=limit, order={"id":"desc"})
@@ -93,11 +93,10 @@ class UserUpdate(BaseModel):
     status: Optional[str] = None
 
 @router.patch("/{user_id}", response_model=UserOut)
-async def update_user(user_id: int, payload: UserUpdate, current=Depends(get_current_user)):
-    await ensure_connected()
-    # allow self or admin
-    if current.role != "admin" and current.id != user_id:
+async def update_user(user_id: int, payload: UserUpdate, current=Depends(get_current_user_or_dev)):
+    if (getattr(current, 'role', None) or '').lower() != 'admin' and getattr(current, 'id', None) != user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
+    await ensure_connected()
     data = {k: v for k, v in payload.dict(exclude_unset=True).items() if k in {"name","role","status"}}
     if not data:
         u = await prisma.user.find_unique(where={"id": user_id})
@@ -108,10 +107,10 @@ async def update_user(user_id: int, payload: UserUpdate, current=Depends(get_cur
     return UserOut(id=u.id, name=u.name, email=u.email, role=u.role, status=u.status, email_verified=bool(u.email_verified))
 
 @router.delete("/{user_id}")
-async def delete_user(user_id: int, current=Depends(get_current_user)):
-    await ensure_connected()
-    if current.role != "admin":
+async def delete_user(user_id: int, current=Depends(get_current_user_or_dev)):
+    if (getattr(current, 'role', None) or '').lower() != 'admin':
         raise HTTPException(status_code=403, detail="Forbidden")
+    await ensure_connected()
     u = await prisma.user.find_unique(where={"id": user_id})
     if not u:
         raise HTTPException(status_code=404, detail="User not found")

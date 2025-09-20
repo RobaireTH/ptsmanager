@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
-from app.api.auth import get_current_user, get_current_user_or_dev, require_role
+from app.api.auth import get_current_user, get_current_user_or_dev
 from app.db.prisma_client import prisma
 
 router = APIRouter(prefix="/events", tags=["events"])  # replacing legacy
@@ -24,6 +24,7 @@ class EventOut(BaseModel):
     status: str
 
 @router.post("/", response_model=EventOut)
+<<<<<<< HEAD
 async def create_event(payload: EventCreate, user=Depends(require_role("admin"))):
     # Ensure status is set if not provided
     event_data = payload.dict()
@@ -31,6 +32,13 @@ async def create_event(payload: EventCreate, user=Depends(require_role("admin"))
         event_data["status"] = "scheduled"
     
     ev = await prisma.event.create(data=event_data)
+=======
+async def create_event(payload: EventCreate, user=Depends(get_current_user_or_dev)):
+    # Allow only admins; in dev mode, the dev user has role 'admin'
+    if (getattr(user, 'role', None) or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
+    ev = await prisma.event.create(data=payload.dict())
+>>>>>>> 531a8cc5ace9cbff3807ed96b99e4e6a2e7e3aa1
     return EventOut(**ev.dict())
 
 @router.get("/", response_model=List[EventOut])
@@ -39,7 +47,9 @@ async def list_events(user=Depends(get_current_user_or_dev), offset: int = Query
     return [EventOut(**e.dict()) for e in events]
 
 @router.patch("/{event_id}", response_model=EventOut)
-async def update_event(event_id: int, payload: dict, user=Depends(get_current_user)):
+async def update_event(event_id: int, payload: dict, user=Depends(get_current_user_or_dev)):
+    if (getattr(user, 'role', None) or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
     ev = await prisma.event.find_unique(where={'id': event_id})
     if not ev:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -49,7 +59,9 @@ async def update_event(event_id: int, payload: dict, user=Depends(get_current_us
     return EventOut(**ev.dict())
 
 @router.delete("/{event_id}")
-async def delete_event(event_id: int, user=Depends(get_current_user)):
+async def delete_event(event_id: int, user=Depends(get_current_user_or_dev)):
+    if (getattr(user, 'role', None) or '').lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Forbidden")
     ev = await prisma.event.find_unique(where={'id': event_id})
     if not ev:
         raise HTTPException(status_code=404, detail="Event not found")
